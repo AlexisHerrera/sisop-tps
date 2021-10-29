@@ -100,13 +100,19 @@ boot_alloc(uint32_t n)
 		nextfree = ROUNDUP((char *) end, PGSIZE);
 	}
 
-	// Allocate a chunk large enough to hold 'n' bytes, then update
-	// nextfree.  Make sure nextfree is kept aligned
-	// to a multiple of PGSIZE.
-	//
-	// LAB 2: Your code here.
+	if (n == 0) {
+		return nextfree;
+	}
 
-	return NULL;
+	physaddr_t physical_address = PADDR(nextfree);
+	physical_address += ROUNDUP(n, PGSIZE);
+	if ((physical_address/PGSIZE) > npages) {
+		panic("boot_alloc: not enough memory");
+	}
+	void* aux = nextfree;
+	nextfree = KADDR(physical_address);
+
+	return aux;
 }
 
 // Set up a two-level page table:
@@ -128,7 +134,7 @@ mem_init(void)
 	i386_detect_memory();
 
 	// Remove this line when you're ready to test this function.
-	panic("mem_init: This function is not finished\n");
+	// panic("mem_init: This function is not finished\n");
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -153,6 +159,8 @@ mem_init(void)
 	// memset
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
+	pages = boot_alloc(npages * sizeof(struct PageInfo));
+	memset(pages, 0, npages * sizeof(struct PageInfo));
 
 
 	//////////////////////////////////////////////////////////////////////
@@ -162,7 +170,7 @@ mem_init(void)
 	// particular, we can now map memory using boot_map_region
 	// or page_insert
 	page_init();
-
+	// panic("mem_init: This function is not finished\n");
 	check_page_free_list(1);
 	check_page_alloc();
 	check_page();
