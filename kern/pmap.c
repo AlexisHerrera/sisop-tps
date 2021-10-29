@@ -105,8 +105,12 @@ boot_alloc(uint32_t n)
 	}
 
 	physaddr_t physical_address = PADDR(nextfree);
-	physical_address += ROUNDUP(n, PGSIZE);
-	if ((physical_address/PGSIZE) > npages) {
+	physaddr_t bytes_to_alloc = ROUNDUP(n, PGSIZE);
+	physical_address += bytes_to_alloc;
+	
+	// npages es la cantidad de memoria fisica disponible en total (en paginas)
+	// Si intento pedir más memoria que la disponible, debería haber un kernel panic
+	if ((bytes_to_alloc/PGSIZE) > npages) {
 		panic("boot_alloc: not enough memory");
 	}
 	void* aux = nextfree;
@@ -134,7 +138,7 @@ mem_init(void)
 	i386_detect_memory();
 
 	// Remove this line when you're ready to test this function.
-	// panic("mem_init: This function is not finished\n");
+	
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -159,10 +163,10 @@ mem_init(void)
 	// memset
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
-	pages = boot_alloc(npages * sizeof(struct PageInfo));
-	memset(pages, 0, npages * sizeof(struct PageInfo));
+	pages = boot_alloc(npages*PGSIZE);
+	memset(pages, 0, npages*PGSIZE);
 
-
+	panic("mem_init: This function is not finished\n");
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
 	// up the list of free physical pages. Once we've done so, all further
@@ -253,7 +257,7 @@ page_init(void)
 	//     This way we preserve the real-mode IDT and BIOS structures
 	//     in case we ever need them.  (Currently we don't, but...)
 	//  2) The rest of base memory, [PGSIZE, npages_basemem * PGSIZE)
-	//     is free.
+	//     npages_is free.
 	//  3) Then comes the IO hole [IOPHYSMEM, EXTPHYSMEM), which must
 	//     never be allocated.
 	//  4) Then extended memory [EXTPHYSMEM, ...).
