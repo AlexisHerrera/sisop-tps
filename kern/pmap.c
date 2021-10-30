@@ -368,42 +368,20 @@ page_decref(struct PageInfo *pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	// Fill this function in
-	// dirección fisica de la pagina
 	pde_t *page_table_add = pgdir + PDX(va);
-	// direccion fisica, es la direccion de latabla adentro del directorio
-
-	// aca puede ser que haya que pasarlo a memoria virtual ^
 	if (!(*page_table_add & PTE_P)) {
-		// chequeo la flag, a manopla pero no encontre una funcion que
-		// lo haga no esta el flag de crear
 		if (!create) {
 			return NULL;
 		}
-		// hay que crear el page, registrarlo en pgdir
-		// y devolver el pte (page table entry)
 		struct PageInfo *new_page = page_alloc(ALLOC_ZERO);
-		// falta un flag?? -> para que se inicialice en 0 supongo
 		if (!new_page) {
 			return NULL;
 		}
-		// page alloc devuelve memoria virtual
-		// tengo que pasarlo a fisica y registrarlo en pgdir
 		physaddr_t page_pa = page2pa(new_page);
-
-		// A: los flags se hacen con OR para no pisar el page_pa
 		page_table_add = (pde_t *) (page_pa | PTE_P | PTE_W);
-		// actualizo el directorio, es memoria fisica
-
-		// Hay que aumentar en 1 las referencias a la pagina
 		new_page->pp_ref++;
 	}
-
-	// Obtengo la dirección del page table entry creado, hay que pasarlo a virtual
 	pte_t *page_entry = KADDR(PTE_ADDR(page_table_add)) + PTX(va);
-	// memoria fisica de vuelta
-
-	// Devolvemos el puntero a PTE
 	return page_entry;
 }
 
@@ -458,7 +436,8 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 		return -E_NO_MEM;
 	}
 	physaddr_t page_address = page2pa(pp);
-	table_entry = (pte_t *) (page_address + (perm | PTE_P));
+	*table_entry = (page_address | (perm | PTE_P));
+	pp->pp_ref++;
 	return 0;
 }
 
