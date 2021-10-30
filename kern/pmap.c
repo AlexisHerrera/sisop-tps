@@ -270,13 +270,12 @@ page_init(void)
 	// Arma una lista enlazada entre las páginas libres
 
 	physaddr_t page_address;
-	for (size_t i = 0; i < npages; i++) {
+	for (size_t i = 1; i < npages; i++) {
 		page_address = i * PGSIZE;
 		// Si está en el rango PGSIZE hasta IOPHYSEM es válida la
 		// memoria "PADDR(boot_alloc(0))" es el fin del arreglo de pages
 		bool is_free_page = page_address >= PADDR(boot_alloc(0)) ||
-		                    page_address < IOPHYSMEM ||
-		                    page_address > EXTPHYSMEM;
+		                    page_address < IOPHYSMEM;
 		if (is_free_page) {
 			pages[i].pp_ref = 0;
 			pages[i].pp_link = page_free_list;
