@@ -266,11 +266,14 @@ page_init(void)
 	// Change the code to reflect this.
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
+
+	// Arma una lista enlazada entre las páginas libres
+
 	physaddr_t page_address;
-	for (size_t i = 0; i < npages; i++) {  // Ignoro pagina 0
+	for (size_t i = 0; i < npages; i++) {
 		page_address = i * PGSIZE;
 		// Si está en el rango PGSIZE hasta IOPHYSEM es válida la memoria
-		// "PADDR(boot_alloc(0))" es el fin del arreglo que pages
+		// "PADDR(boot_alloc(0))" es el fin del arreglo de pages
 		bool is_free_page = page_address >= PADDR(boot_alloc(0)) ||
 		                    page_address < IOPHYSMEM ||
 							page_address > EXTPHYSMEM;
@@ -298,7 +301,19 @@ struct PageInfo *
 page_alloc(int alloc_flags)
 {
 	// Fill this function in
-	return 0;
+	if (!page_free_list) {
+		return NULL;
+	}
+	struct PageInfo *page_allocated = page_free_list;
+	page_free_list = page_allocated->pp_link;
+	page_allocated->pp_link = NULL;
+
+	// Si se pide iniciar a cero, obtengo la dirección virtual de
+	// la página y la seteo en 0.
+	if (alloc_flags & ALLOC_ZERO) {
+		memset(page2kva(page_allocated), 0, PGSIZE);
+	}
+	return page_allocated;
 }
 
 //
