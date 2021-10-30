@@ -369,7 +369,41 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	return NULL;
+	// En pseudocódigo lo que hay que hacer es:
+	pte_t *page_entry;
+	// dirección fisica de la pagina
+	pde_t *page_dir_pa = pgdir[PDX(va)];
+	if (*page_dir_pa == 0) {  // no apunta a nada
+		// no esta el flag de crear
+		if (create == 0) {
+			return NULL;
+		}
+		// hay que crear el page, registrarlo en pgdir
+		// y devolver el pte (page table entry)
+		struct PageInfo *new_page = page_alloc();  // falta un flag??
+		if (new_page == NULL) {
+			return NULL;
+		}
+		// page alloc devuelve memoria virtual
+		// tengo que pasarlo a fisica y registrarlo en pgdir
+		physaddr_t page_pa = page2pa(new_page);
+		// lo registro con los flags correspondientes
+		pgdir[PDX(va)] = page_pa;  // aca tambien faltan flags creo
+		// Hay que aumentar en 1 las referencias a la pagina
+		new_page->pp_ref++;
+
+		// Obtengo la dirección del page table entry creado, hay que pasarlo a virtual
+		pte_t *page_entry = KADDR(PTE_ADDR(*pgdir[PDX(va)]));
+
+		// Devolvemos el puntero a PTE
+		return page_entry + PTX(va);
+	}
+
+	// Aca hay un page table válido
+	// Obtengo la dirección del page table entry, hay que pasarlo a virtual
+	page_entry = KADDR(PTE_ADDR(*pgdir[PDX(va)]));
+	// Hay que sumarle el offset
+	return page_entry + PTX(va);
 }
 
 //
