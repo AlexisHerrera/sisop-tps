@@ -369,41 +369,35 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	// En pseudocódigo lo que hay que hacer es:
-	pte_t *page_entry;
 	// dirección fisica de la pagina
-	pde_t *page_dir_pa = pgdir[PDX(va)];
-	if (*page_dir_pa == 0) {  // no apunta a nada
+	pde_t *page_table_add = pgdir + PDX(va); //direccion fisica, es la direccion de latabla adentro del directorio
+
+	// aca puede ser que haya que pasarlo a memoria virtual ^
+	if (!(*page_table_add & PTE_P)) {  // chequeo la flag, a manopla pero no encontre una funcion que lo haga
 		// no esta el flag de crear
-		if (create == 0) {
+		if (!create) {
 			return NULL;
 		}
 		// hay que crear el page, registrarlo en pgdir
 		// y devolver el pte (page table entry)
-		struct PageInfo *new_page = page_alloc();  // falta un flag??
-		if (new_page == NULL) {
+		struct PageInfo *new_page = page_alloc(ALLOC_ZERO);  // falta un flag?? -> para que se inicialice en 0 supongo
+		if (!new_page) {
 			return NULL;
 		}
 		// page alloc devuelve memoria virtual
 		// tengo que pasarlo a fisica y registrarlo en pgdir
 		physaddr_t page_pa = page2pa(new_page);
-		// lo registro con los flags correspondientes
-		pgdir[PDX(va)] = page_pa;  // aca tambien faltan flags creo
+		page_table_add = (pde_t *)(page_pa & PTE_P & PTE_W); //actualizo el directorio, es memoria fisica
+		
 		// Hay que aumentar en 1 las referencias a la pagina
 		new_page->pp_ref++;
-
-		// Obtengo la dirección del page table entry creado, hay que pasarlo a virtual
-		pte_t *page_entry = KADDR(PTE_ADDR(*pgdir[PDX(va)]));
-
-		// Devolvemos el puntero a PTE
-		return page_entry + PTX(va);
 	}
 
-	// Aca hay un page table válido
-	// Obtengo la dirección del page table entry, hay que pasarlo a virtual
-	page_entry = KADDR(PTE_ADDR(*pgdir[PDX(va)]));
-	// Hay que sumarle el offset
-	return page_entry + PTX(va);
+		// Obtengo la dirección del page table entry creado, hay que pasarlo a virtual
+		pte_t *page_entry = KADDR(PTE_ADDR(page_table_add)) + PTX(va); // memoria fisica de vuelta
+
+		// Devolvemos el puntero a PTE
+		return page_entry;
 }
 
 //
@@ -470,7 +464,16 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
-	return NULL;
+	pte_t *table_entry = pgdir_walk(pgdir, va, false);
+	if (!table_entry) {
+		return NULL;
+	}
+	if (!pte_store) {
+		*pte_store = table_entry;
+	}
+	physaddr_t table_addres = PTE_ADDR(table_entry);
+	struct PageInfo *page = pa2page(table_addres);
+	return page;
 }
 
 //
