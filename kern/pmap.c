@@ -370,21 +370,20 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
 	// dirección fisica de la pagina
-	pde_t *page_table_add =
-	        pgdir +
-	        PDX(va);  // direccion fisica, es la direccion de latabla adentro del directorio
+	pde_t *page_table_add = pgdir + PDX(va);
+	// direccion fisica, es la direccion de latabla adentro del directorio
 
 	// aca puede ser que haya que pasarlo a memoria virtual ^
-	if (!(*page_table_add &
-	      PTE_P)) {  // chequeo la flag, a manopla pero no encontre una funcion que lo haga
-		// no esta el flag de crear
+	if (!(*page_table_add & PTE_P)) {
+		// chequeo la flag, a manopla pero no encontre una funcion que
+		// lo haga no esta el flag de crear
 		if (!create) {
 			return NULL;
 		}
 		// hay que crear el page, registrarlo en pgdir
 		// y devolver el pte (page table entry)
-		struct PageInfo *new_page = page_alloc(
-		        ALLOC_ZERO);  // falta un flag?? -> para que se inicialice en 0 supongo
+		struct PageInfo *new_page = page_alloc(ALLOC_ZERO);
+		// falta un flag?? -> para que se inicialice en 0 supongo
 		if (!new_page) {
 			return NULL;
 		}
@@ -393,17 +392,16 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		physaddr_t page_pa = page2pa(new_page);
 
 		// A: los flags se hacen con OR para no pisar el page_pa
-		page_table_add =
-		        (pde_t *) (page_pa | PTE_P |
-		                   PTE_W);  // actualizo el directorio, es memoria fisica
+		page_table_add = (pde_t *) (page_pa | PTE_P | PTE_W);
+		// actualizo el directorio, es memoria fisica
 
 		// Hay que aumentar en 1 las referencias a la pagina
 		new_page->pp_ref++;
 	}
 
 	// Obtengo la dirección del page table entry creado, hay que pasarlo a virtual
-	pte_t *page_entry = KADDR(PTE_ADDR(page_table_add)) +
-	                    PTX(va);  // memoria fisica de vuelta
+	pte_t *page_entry = KADDR(PTE_ADDR(page_table_add)) + PTX(va);
+	// memoria fisica de vuelta
 
 	// Devolvemos el puntero a PTE
 	return page_entry;
@@ -514,8 +512,8 @@ page_remove(pde_t *pgdir, void *va)
 	if (page) {
 		page_decref(page);
 		table_entry = NULL;
-		tlb_invalidate(pgdir,
-		               va);  // chequear adentro de esto, no entendi que hacer
+		tlb_invalidate(pgdir, va);
+		// chequear adentro de esto, no entendi que hacer
 	}
 }
 
