@@ -373,7 +373,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	pde_t *page_table_add = pgdir + PDX(va); //direccion fisica, es la direccion de latabla adentro del directorio
 
 	// aca puede ser que haya que pasarlo a memoria virtual ^
-	if (!(*page_table_add & PTE_P)) {  // chequeo la flag, a manopla pero no encontre una funcion que lo haga
+	if (!page_table_add) {  // chequeo la flag, a manopla pero no encontre una funcion que lo haga
 		// no esta el flag de crear
 		if (!create) {
 			return NULL;
@@ -447,7 +447,13 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	// Fill this function in
+	page_remove(pgdir, va);
+	pte_t *table_entry = pgdir_walk(pgdir, va, true);
+	if (table_entry) {
+		return E_NO_MEM;
+	}
+	physaddr_t page_address = page2pa(pp);
+	table_entry = (pte_t *)(page_address + (perm | PTE_P));
 	return 0;
 }
 
@@ -496,7 +502,13 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// Fill this function in
+	pte_t * table_entry;
+	struct PageInfo *page = page_lookup(pgdir, va, &table_entry);
+	if (page) {
+		page_decref(page);
+		table_entry = NULL;
+		tlb_invalidate(pgdir, va); //chequear adentro de esto, no entendi que hacer
+	}
 }
 
 //
