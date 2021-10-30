@@ -387,7 +387,9 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		// page alloc devuelve memoria virtual
 		// tengo que pasarlo a fisica y registrarlo en pgdir
 		physaddr_t page_pa = page2pa(new_page);
-		page_table_add = (pde_t *)(page_pa & PTE_P & PTE_W); //actualizo el directorio, es memoria fisica
+		
+		// A: los flags se hacen con OR para no pisar el page_pa
+		page_table_add = (pde_t *)(page_pa | PTE_P | PTE_W); //actualizo el directorio, es memoria fisica
 		
 		// Hay que aumentar en 1 las referencias a la pagina
 		new_page->pp_ref++;
@@ -468,11 +470,11 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 	if (!table_entry) {
 		return NULL;
 	}
-	if (!pte_store) {
+	if (pte_store) {
 		*pte_store = table_entry;
 	}
-	physaddr_t table_addres = PTE_ADDR(table_entry);
-	struct PageInfo *page = pa2page(table_addres);
+	physaddr_t table_address = PTE_ADDR(table_entry);
+	struct PageInfo *page = pa2page(table_address);
 	return page;
 }
 
