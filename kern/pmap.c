@@ -432,13 +432,13 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 	// Hay que recorrer desde va hasta va+size de las page table entries
 	// Luego para cada pte, mapeo/guardo la dirección física y los permisos
 #ifdef TP1_PSE
-	// Large pages activado
+	// Large pages activado y es una large table entry
 	if ((size % PTSIZE == 0) && (va % PTSIZE == 0) && (pa % PTSIZE == 0)) {
 		assert(size % PTSIZE == 0);
 		assert(va % PTSIZE == 0);
 		assert(pa % PTSIZE == 0);
 		for (int i = 0; i < size / PTSIZE; i++) {
-			// obtengo la
+			// Obtengo la dirección de la página y almaceno la direccion física
 			pde_t *large_table_entry = pgdir + PDX(va);
 			*large_table_entry = pa | perm | PTE_PS | PTE_P;
 			va += PTSIZE;
