@@ -427,17 +427,6 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 {
 	// Hay que recorrer desde va hasta va+size de las page table entries
 	// Luego para cada pte, mapeo/guardo la dirección física y los permisos
-
-	// for (int i = 0; i < size / PGSIZE; i++) {
-	// 	pte_t *table_entry = pgdir_walk(pgdir, (const void *) va, true);
-	// 	*table_entry = pa | perm | PTE_P;
-	// 	// actualizo la dirección virtual y la física
-	// 	// (pueden mutarse sin problema, si falla crear variable local)
-	// 	va += PGSIZE;
-	// 	pa += PGSIZE;
-	// }
-
-
 #ifndef TP1_PSE
 	for (int i = 0; i < size / PGSIZE; i++) {
 		pte_t *table_entry = pgdir_walk(pgdir, (const void *) va, true);
@@ -449,45 +438,26 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 	}
 #else
 	while (size > 0) {
-		int offset = 0;
 		if ((size >= PTSIZE) && (va % PTSIZE == 0) && (pa % PTSIZE == 0)) {
 			pde_t *page_table_add = pgdir + PDX(va);
 			*page_table_add = pa | perm | PTE_PS | PTE_P;
-			offset = PTSIZE;
+			va += PGSIZE;
+			pa += PGSIZE;
+			size -= PGSIZE;
 		} else {
 			pte_t *table_entry =
 			        pgdir_walk(pgdir, (const void *) va, true);
 			*table_entry = pa | perm | PTE_P;
 			// actualizo la dirección virtual y la física
 			// (pueden mutarse sin problema, si falla crear variable local)
-			offset = PGSIZE;
+			va += PTSIZE;
+			pa += PTSIZE;
+			size -= PTSIZE;
 		}
-		va += offset;
-		pa += offset;
-		size -= offset;
+
 	}
 #endif
 }
-
-// while (size > 0) {
-// 	int offset = 0;
-// 	// #ifndef TP1_PSE
-// 		// if((size >= PTSIZE) && (va % PTSIZE == 0) && (pa % PTSIZE == 0)) {
-// 		// 	pde_t *page_table_add = pgdir + PDX(va);
-// 		// 	*page_table_add = pa | perm | PTE_PS | PTE_P;
-// 		// 	offset = PTSIZE;
-// 		// }
-// 	// #else
-// 		pte_t *table_entry = pgdir_walk(pgdir, (const void *) va, true);
-// 		*table_entry = pa | perm | PTE_P;
-// 		// actualizo la dirección virtual y la física
-// 		// (pueden mutarse sin problema, si falla crear variable local)
-// 		offset = PGSIZE;
-// 	// #endif
-// 	va += offset;
-// 	pa += offset;
-// 	size -= offset;
-
 
 //
 // Map the physical page 'pp' at virtual address 'va'.
