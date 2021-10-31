@@ -412,7 +412,16 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
-	// Fill this function in
+	// Hay que recorrer desde va hasta va+size de las page table entries
+	// Luego para cada pte, mapeo/guardo la dirección física y los permisos
+	for (int i = 0; i < size / PGSIZE; i++) {
+		pte_t *table_entry = pgdir_walk(pgdir, (const void *) va, true);
+		*table_entry = pa | perm | PTE_P;
+		// actualizo la dirección virtual y la física
+		// (pueden mutarse sin problema, si falla crear variable local)
+		va += PGSIZE;
+		pa += PGSIZE;
+	}
 }
 
 //
