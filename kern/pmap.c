@@ -452,6 +452,10 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	// Entiendase mapear como poner en la table_entry
 	// la dirección física del pp + flags
 
+	// si la pagina tiene solo 1 referencia
+	// me va a eliminar la página al hacer el remove
+	// entonces sumo una referencia antes del remove
+	pp->pp_ref++;
 	// Si ya está mapeada, elimino la página
 	if (*table_entry & PTE_P) {
 		page_remove(pgdir, va);
@@ -459,7 +463,7 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	// Ahora si hago el mapeo
 	physaddr_t page_address = page2pa(pp);
 	*table_entry = page_address | (perm | PTE_P);
-	pp->pp_ref++;
+
 	return 0;
 }
 
