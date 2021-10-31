@@ -368,7 +368,7 @@ page_decref(struct PageInfo *pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	pde_t *page_table_add = pgdir + PDX(va);
+	pte_t *page_table_add = pgdir + PDX(va);
 	// Si no está creado
 	if (!(*page_table_add & PTE_P)) {
 		if (!create) {
@@ -381,7 +381,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		// Dirección física del page_table
 		physaddr_t page_pa = page2pa(new_page);
 		// El pgdir adentro tiene una dirección física con flags
-		*page_table_add = page_pa | PTE_P | PTE_W;
+		*page_table_add = page_pa | PTE_P | PTE_W | PTE_U;
 		new_page->pp_ref++;
 
 		// De aca podría hacer return pero es más elegente sin hacerlo
@@ -394,8 +394,8 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 
 	// Obtengo la dirección virtual del pte
 	// Le sumo el índice del page table entry
-	pte_t *page_entry = KADDR(pte_physadd) + PTX(va);
-	return page_entry;
+	pte_t *page_entry = KADDR(pte_physadd);
+	return page_entry + PTX(va);
 }
 
 //
