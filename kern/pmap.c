@@ -369,7 +369,8 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	pde_t *page_table_add = pgdir + PDX(va);
-	if (!(*page_table_add & PTE_P)) {
+	// Si no está creado
+	if (!(*page_table_add & PTE_P)) { 
 		if (!create) {
 			return NULL;
 		}
@@ -377,11 +378,23 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 		if (!new_page) {
 			return NULL;
 		}
+		// Dirección física del page_table
 		physaddr_t page_pa = page2pa(new_page);
-		page_table_add = (pde_t *) (page_pa | PTE_P | PTE_W);
+		// El pgdir adentro tiene una dirección física con flags
+		*page_table_add = page_pa | PTE_P | PTE_W;
 		new_page->pp_ref++;
+
+		// De aca podría hacer return pero es más elegente sin hacerlo
+		// return page2kva(new_page) + PTX(va)
 	}
-	pte_t *page_entry = KADDR(PTE_ADDR(page_table_add)) + PTX(va);
+	// La pte apunta a una entrada existente
+	// Obtengo la dirección física del pte
+	// El PTE_ADDR le saca los flags
+	physaddr_t pte_physadd = PTE_ADDR(*page_table_add);
+	
+	// Obtengo la dirección virtual del pte
+	// Le sumo el índice del page table entry
+	pte_t *page_entry = KADDR(pte_physadd) + PTX(va);
 	return page_entry;
 }
 
@@ -430,14 +443,14 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	page_remove(pgdir, va);
-	pte_t *table_entry = pgdir_walk(pgdir, va, true);
-	if (!table_entry) {
-		return -E_NO_MEM;
-	}
-	physaddr_t page_address = page2pa(pp);
-	*table_entry = (page_address | (perm | PTE_P));
-	pp->pp_ref++;
+	// page_remove(pgdir, va);
+	// pte_t *table_entry = pgdir_walk(pgdir, va, true);
+	// if (!table_entry) {
+	// 	return -E_NO_MEM;
+	// }
+	// physaddr_t page_address = page2pa(pp);
+	// *table_entry = (page_address | (perm | PTE_P));
+	// pp->pp_ref++;
 	return 0;
 }
 
@@ -463,7 +476,9 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 	if (pte_store) {
 		*pte_store = table_entry;
 	}
-	physaddr_t table_address = PTE_ADDR(table_entry);
+	// PTE_ADDR me devuelve la dirección física del pte
+	physaddr_t table_address = PTE_ADDR(*table_entry);
+	// Y de la dir física la vuelvo a la de page Info
 	struct PageInfo *page = pa2page(table_address);
 	return page;
 }
@@ -486,14 +501,14 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	pte_t *table_entry;
-	struct PageInfo *page = page_lookup(pgdir, va, &table_entry);
-	if (page) {
-		page_decref(page);
-		table_entry = NULL;
-		tlb_invalidate(pgdir, va);
-		// chequear adentro de esto, no entendi que hacer
-	}
+	// pte_t *table_entry;
+	// struct PageInfo *page = page_lookup(pgdir, va, &table_entry);
+	// if (page) {
+	// 	page_decref(page);
+	// 	table_entry = NULL;
+	// 	tlb_invalidate(pgdir, va);
+	// 	// chequear adentro de esto, no entendi que hacer
+	// }
 }
 
 //
