@@ -510,14 +510,17 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 void
 page_remove(pde_t *pgdir, void *va)
 {
-	// pte_t *table_entry;
-	// struct PageInfo *page = page_lookup(pgdir, va, &table_entry);
-	// if (page) {
-	// 	page_decref(page);
-	// 	table_entry = NULL;
-	// 	tlb_invalidate(pgdir, va);
-	// 	// chequear adentro de esto, no entendi que hacer
-	// }
+	// Cargo la dir pte con page_lookup
+	pte_t *table_entry;
+	struct PageInfo *page = page_lookup(pgdir, va, &table_entry);
+
+	if (page) {
+		// Además de liberar, también decrementa las referencias a la pagina
+		page_decref(page);
+		// La seteo en 0 (no a la dir_pte)
+		*table_entry = 0;
+		tlb_invalidate(pgdir, va);
+	}
 }
 
 //
