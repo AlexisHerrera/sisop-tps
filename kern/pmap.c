@@ -368,7 +368,7 @@ page_decref(struct PageInfo *pp)
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
-	pte_t *page_table_add = pgdir + PDX(va);
+	pde_t *page_table_add = pgdir + PDX(va);
 	// Si no está creado
 	if (!(*page_table_add & PTE_P)) {
 		if (!create) {
