@@ -443,14 +443,23 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
-	// page_remove(pgdir, va);
-	// pte_t *table_entry = pgdir_walk(pgdir, va, true);
-	// if (!table_entry) {
-	// 	return -E_NO_MEM;
-	// }
-	// physaddr_t page_address = page2pa(pp);
-	// *table_entry = (page_address | (perm | PTE_P));
-	// pp->pp_ref++;
+	// Dado un pgdir y un va obtengo la dirección del pte
+	// Se crea una página si es necesario (flag en true)
+	pte_t *table_entry = pgdir_walk(pgdir, va, true);
+	if (!table_entry) {
+		return -E_NO_MEM;
+	}
+	// Entiendase mapear como poner en la table_entry
+	// la dirección física del pp + flags
+
+	// Si ya está mapeada, elimino la página
+	if (*table_entry & PTE_P) {
+		page_remove(pgdir, va);
+	}
+	// Ahora si hago el mapeo
+	physaddr_t page_address = page2pa(pp);
+	*table_entry = page_address | (perm | PTE_P);
+	pp->pp_ref++;
 	return 0;
 }
 
