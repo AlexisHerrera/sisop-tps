@@ -370,7 +370,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	pde_t *page_table_add = pgdir + PDX(va);
 	// Si no está creado
-	if (!(*page_table_add & PTE_P)) { 
+	if (!(*page_table_add & PTE_P)) {
 		if (!create) {
 			return NULL;
 		}
@@ -391,7 +391,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	// Obtengo la dirección física del pte
 	// El PTE_ADDR le saca los flags
 	physaddr_t pte_physadd = PTE_ADDR(*page_table_add);
-	
+
 	// Obtengo la dirección virtual del pte
 	// Le sumo el índice del page table entry
 	pte_t *page_entry = KADDR(pte_physadd) + PTX(va);
@@ -477,9 +477,9 @@ page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 		*pte_store = table_entry;
 	}
 	// PTE_ADDR me devuelve la dirección física del pte
-	physaddr_t table_address = PTE_ADDR(*table_entry);
-	// Y de la dir física la vuelvo a la de page Info
-	struct PageInfo *page = pa2page(table_address);
+	physaddr_t pte_physadd = PTE_ADDR(*table_entry);
+	// Y de la dir física del pte, obtengo la page
+	struct PageInfo *page = pa2page(pte_physadd);
 	return page;
 }
 
