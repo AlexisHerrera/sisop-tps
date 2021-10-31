@@ -189,7 +189,7 @@ mem_init(void)
 	// Your code goes here:
 	boot_map_region(kern_pgdir,
 	                UPAGES,
-	                npages * sizeof(struct PageInfo),
+	                ROUNDUP(npages * sizeof(struct PageInfo), PGSIZE),
 	                PADDR(pages),
 	                PTE_U | PTE_P);
 
@@ -207,7 +207,7 @@ mem_init(void)
 	// Your code goes here:
 	boot_map_region(kern_pgdir,
 	                KSTACKTOP - KSTKSIZE,
-	                KSTKSIZE,
+	                ROUNDUP(KSTKSIZE, PGSIZE),
 	                PADDR(bootstack),
 	                PTE_W | PTE_P);
 
@@ -220,7 +220,11 @@ mem_init(void)
 	// we just set up the mapping anyway.
 	// Permissions: kernel RW, user NONE
 	// Your code goes here:
-	boot_map_region(kern_pgdir, KERNBASE, (2 ^ 32) - KERNBASE, 0, PTE_W | PTE_P);
+	boot_map_region(kern_pgdir,
+	                KERNBASE,
+	                ROUNDUP((2 ^ 32) - 1 - KERNBASE, PGSIZE),
+	                0,
+	                PTE_W | PTE_P);
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -427,6 +431,7 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 {
 	// Hay que recorrer desde va hasta va+size de las page table entries
 	// Luego para cada pte, mapeo/guardo la dirección física y los permisos
+	assert(size % PGSIZE == 0);
 #ifndef TP1_PSE
 	for (int i = 0; i < size / PGSIZE; i++) {
 		pte_t *table_entry = pgdir_walk(pgdir, (const void *) va, true);
@@ -454,7 +459,6 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 			pa += PTSIZE;
 			size -= PTSIZE;
 		}
-
 	}
 #endif
 }
