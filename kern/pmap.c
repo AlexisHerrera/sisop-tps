@@ -222,7 +222,7 @@ mem_init(void)
 	// Your code goes here:
 	boot_map_region(kern_pgdir,
 	                KERNBASE,
-	                ROUNDUP((2 ^ 32) - 1 - KERNBASE, PGSIZE),
+	                (0xffffffff) - KERNBASE + 1,
 	                0,
 	                PTE_W | PTE_P);
 
