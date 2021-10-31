@@ -222,7 +222,7 @@ mem_init(void)
 	// Your code goes here:
 	boot_map_region(kern_pgdir,
 	                KERNBASE,
-	                (0xffffffff) - KERNBASE + 1,
+	                ROUNDUP((0xffffffff) - KERNBASE + 1, PGSIZE),
 	                0,
 	                PTE_W | PTE_P);
 
@@ -431,36 +431,32 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 {
 	// Hay que recorrer desde va hasta va+size de las page table entries
 	// Luego para cada pte, mapeo/guardo la dirección física y los permisos
+#ifdef TP1_PSE
+	// Large pages activado
+	if ((size % PTSIZE == 0) && (va % PTSIZE == 0) && (pa % PTSIZE == 0)) {
+		assert(size % PTSIZE == 0);
+		assert(va % PTSIZE == 0);
+		assert(pa % PTSIZE == 0);
+		for (int i = 0; i < size / PTSIZE; i++) {
+			// obtengo la
+			pde_t *large_table_entry = pgdir + PDX(va);
+			*large_table_entry = pa | perm | PTE_PS | PTE_P;
+			va += PTSIZE;
+			pa += PTSIZE;
+		}
+		return;
+	}
+#endif
 	assert(size % PGSIZE == 0);
-#ifndef TP1_PSE
+	assert(va % PGSIZE == 0);
+	assert(pa % PGSIZE == 0);
+	// Large pages desactivado o es una short page
 	for (int i = 0; i < size / PGSIZE; i++) {
 		pte_t *table_entry = pgdir_walk(pgdir, (const void *) va, true);
 		*table_entry = pa | perm | PTE_P;
-		// actualizo la dirección virtual y la física
-		// (pueden mutarse sin problema, si falla crear variable local)
 		va += PGSIZE;
 		pa += PGSIZE;
 	}
-#else
-	while (size > 0) {
-		if ((size >= PTSIZE) && (va % PTSIZE == 0) && (pa % PTSIZE == 0)) {
-			pde_t *page_table_add = pgdir + PDX(va);
-			*page_table_add = pa | perm | PTE_PS | PTE_P;
-			va += PGSIZE;
-			pa += PGSIZE;
-			size -= PGSIZE;
-		} else {
-			pte_t *table_entry =
-			        pgdir_walk(pgdir, (const void *) va, true);
-			*table_entry = pa | perm | PTE_P;
-			// actualizo la dirección virtual y la física
-			// (pueden mutarse sin problema, si falla crear variable local)
-			va += PTSIZE;
-			pa += PTSIZE;
-			size -= PTSIZE;
-		}
-	}
-#endif
 }
 
 //
