@@ -1,4 +1,4 @@
-Simulando segmentacion
+Simulando segmentación
 
 1) Simulacion de traducciones
 
@@ -42,8 +42,8 @@ Virtual Address Trace
 
 ```
 
-En ambos casos, las 2 direcciónes virtuales se traducen a direcciónes físicas válidas. Para hacer esto tradujimos las direcciónes y chequeamos que se encuentren dentro de su segmento.
-Antes de empezar con la traducción recordemos que necesitamos 6 bits para representar un espacio de 64 direcciónes.
+En ambos casos, las 2 direcciones virtuales se traducen a direcciones físicas válidas. Para hacer esto tradujimos las direcciones y chequeamos que se encuentren dentro de su segmento.
+Antes de empezar con la traducción recordemos que necesitamos 6 bits para representar un espacio de 64 direcciones.
 Luego si tiene el bit mas significativo con un 1 entonces la dirección virtual es mayor o igual a 32 en decimal.
 
 En el caso del padrón 104128, la VA 12 se traduce como una dirección física en el segmento 0 al ser la VA menor a 32.
@@ -105,8 +105,8 @@ Virtual Address Trace
 2) Traducciones inversas
 
 En el primer caso, no es posible generar hacer una traducción inversa. 
-Podemos ver que ambas direcciónes virtuales (12 y 7) viven en el segmento 0, y las direcciónes físicas que queremos acceder son 205 y 62.
-Como el tamaño máximo de un segmento es de 32 posiciones, es imposible que 2 direcciónes virtuales del mismo segmento accedan a 2 direcciónes físicas con una separacion mayor a 32 direcciónes. Como las direcciónes físicas se encuentran a 143 posiciones, esta traduccion inversa no se puede lograr.
+Podemos ver que ambas direcciones virtuales (12 y 7) viven en el segmento 0, y las direcciones físicas que queremos acceder son 205 y 62.
+Como el tamaño máximo de un segmento es de 32 posiciones, es imposible que 2 direcciones virtuales del mismo segmento accedan a 2 direcciones físicas con una separacion mayor a 32 direcciones. Como las direcciones físicas se encuentran a 143 posiciones, esta traduccion inversa no se puede lograr.
 
 En cambio, en el otro caso si se puede hacer. Queremos que la dirección virtual 48 se traduzca a la dirección física 60 y la 9 en 55. La unica precaución que hay que tener es que no se nos superpongan los segmentos.
 El segmento 1 debe comenzar en la dirección 76 y tener un tamaño de 16 y el segmento 0 debe comenzar en 46 y un límite de 10.
@@ -134,10 +134,10 @@ Virtual Address Trace
 
 ```
 
-3) Límites de segmentacion
+3) Límites de segmentación
 
 1) El tamaño del espacio fisico es de 128 posiciones y el virtual de 32
-2) No es posible, porque tendrias 2 direcciónes virtuales distintas apuntando al mismo lugar de memoria física. 
+2) En teoría es posible sin embargo el script no lo permite porque tendrías 2 direcciones virtuales distintas apuntando al mismo lugar de memoria física. 
 
 ```
 ./segmentation.py -a 32 -p 128 -A 10 -b 0 -l 10 -B 20 -L 11 -c
@@ -157,7 +157,7 @@ Error: segments overlap in physical memory
 
 ```
 
-3) Si, es posible, teniendo 2 segmentos que tengan 16 direcciónes se puede direcciónar el 100% de la memoria virtual.
+3) Si, es posible, teniendo 2 segmentos que tengan 16 direcciones se puede direccionar el 100% de la memoria virtual.
 
 ```
 
@@ -184,5 +184,5 @@ Virtual Address Trace
 
 ```
 
-4) En cambio, no es posible direcciónar el 90% de la memoria física, ya que solo podemos acceder por la misma a traves de direcciónes virtuales y solamente tenemos 5 bits para direcciónar la misma y 2 segmentos disponibles. Lo máximo que podemos direcciónar es un 25% de la memoria física.
+4) En cambio, no es posible direccionar el 90% de la memoria física, ya que solo podemos acceder por la misma a traves de direcciones virtuales y solamente tenemos 5 bits para direccionar la misma y 2 segmentos disponibles. Lo máximo que podemos direccionar es un 25% de la memoria física.
    

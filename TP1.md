@@ -4,11 +4,13 @@ TP1: Memoria virtual en JOS
 boot_alloc_pos
 --------------
 
-$ nm kernel
-f0117530 b addr_6845
-f0100b2b t boot_alloc
+a)
+Primero obtenemos donde termina el kernel.
+$ nm obj/kern/kernel | grep end
+f0117950 B end
 
-la direccion f0100b2b es 4027583275 en decimal
+Entonces de ahí simplemente alineamos a PGSIZE (que es 4096).
+Es decir, la dirección es: 0xf0117950 + 4096 - 0xf0117950 % 4096 = 0xf0118000.
 
 ```
 
@@ -35,13 +37,19 @@ Value returned is $1 = (void *) 0xf0118000     <-----
 page_alloc
 ----------
 
-page2pa calcula la direccion fisica de la pagina asosiada a la estructura PageInfo provista. Esta funcion le resta la direccion de la primer pagina(guardada en pages) y hace un shift de 12 posiciones para descartar los flags y quedarse con la direccion
+page2pa calcula la direccion fisica de la pagina asosiada a la estructura PageInfo provista.  
+Esta funcion le resta la direccion de la primer pagina(guardada en pages) y hace un shift de 12 posiciones, lo cual es equivalente a multiplicar 12 veces por 2, es decir por 4096.
+Por lo tanto, obtengo el offset y luego multiplico por la cantidad de páginas, esto es la dirección física
+
+
 page2kva calcula la direccion virtual de la misma pagina, primero calcula la direccion fisica con page2pa, y luego hace un KADDR, que le suma la direccion base del kernel.
 
 
 map_region_large
 ----------------
 
-Al usar las paginas grandes, no hace falta reservar manualmente una tabla de entrada del pageDirectory, por lo tanto podemos sacar la entry_pgtable y hacer que se maneje automaticamente mediante una pagina grande. Al no tener toda esta memoria alocada mediante el codigo, nos estamos ahorrando de una page table entera, que ocupan 1024 espacios de 32 bits, es decir 32KiB.
-
-Esto es una cantidad fija de memoria, ya que se realiza antes del i386_init() y por lo tanto no se conocen las dimensiones de la maquina. Esta memoria es necesaria para el set-up del JOS y no es negociable.
+Al usar las paginas grandes, no hace falta reservar manualmente una tabla de entrada del pageDirectory, por lo tanto podemos sacar la entry_pgtable y hacer que se maneje automaticamente mediante una pagina grande.
+Para las short pages ocupamos una posicion en la page dir que hace referencia a un page table de 1024 entradas de 4 bytes.
+En cambio para las large pages solo necesitaremos la tabla de page dir, el cual ocupa 4 bytes x 1024 entradas a esa tabla.
+Entonces me ahorro por cada entrada de page dir, esa page table de 1024 x 4 bytes = 4096 bytes = 4KibiBytes.
+Lógicamente cuanto más direcciones tengamos a las que direccionar, mas ahorro tendremos.
