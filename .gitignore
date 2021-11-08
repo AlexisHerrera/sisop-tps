@@ -1,3 +1,7 @@
+#vscode 
+.vscode
+null.d
+
 .gitignore
 /__pycache__
 /obj
