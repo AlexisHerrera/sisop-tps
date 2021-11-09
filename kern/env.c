@@ -188,24 +188,6 @@ env_setup_vm(struct Env *e)
 
 	return 0;
 }
-int fake_env_alloc(void);
-int
-fake_env_alloc()
-{
-	int32_t generation;
-	int r;
-	struct Env *e;
-
-	if (!(e = env_free_list))
-		return -E_NO_FREE_ENV;
-	// Generate an env_id for this environment.
-	generation = (e->env_id + (1 << ENVGENSHIFT)) & ~(NENV - 1);
-	if (generation <= 0)  // Don't create a negative env_id.
-		generation = 1 << ENVGENSHIFT;
-	e->env_id = generation | (e - envs);
-	cprintf("[%08x]\n", e->env_id);
-	return 0;
-}
 
 //
 // Allocates and initializes a new environment.

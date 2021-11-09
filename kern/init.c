@@ -29,15 +29,9 @@ i386_init(void)
 
 	// Lab 2 memory management initialization functions
 	mem_init();
+
 	// Lab 3 user environment initialization functions
 	env_init();
-	// test
-	for (size_t i = 0; i < 5; i++) {
-		fake_env_alloc();
-	}
-	panic("Fin del test");
-	
-	
 	trap_init();
 
 #if defined(TEST)
