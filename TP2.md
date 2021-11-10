@@ -8,7 +8,6 @@ env_alloc
 2. Serán distintos env_id distintos como los que se obtuvieron en 1.
 
 
-
 env_init_percpu
 ---------------
 

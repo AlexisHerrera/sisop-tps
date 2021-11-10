@@ -37,7 +37,7 @@ Value returned is $1 = (void *) 0xf0118000     <-----
 page_alloc
 ----------
 
-page2pa calcula la direccion fisica de la pagina asosiada a la estructura PageInfo provista.  
+page2pa calcula la direccion fisica de la pagina asociada a la estructura PageInfo provista.  
 Esta funcion le resta la direccion de la primer pagina(guardada en pages) y hace un shift de 12 posiciones, lo cual es equivalente a multiplicar 12 veces por 2, es decir por 4096.
 Por lo tanto, obtengo el offset y luego multiplico por la cantidad de páginas, esto es la dirección física
 
