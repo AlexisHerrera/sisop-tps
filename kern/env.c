@@ -113,7 +113,6 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-	memset(envs, 0, NENV * sizeof(struct Env));
 	for (int i = NENV - 1; i >= 0; i--) {
 		envs[i].env_id = 0;
 		envs[i].env_link = env_free_list;
