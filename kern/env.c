@@ -362,11 +362,17 @@ load_icode(struct Env *e, uint8_t *binary)
 	// Itera los e_phnum headers que tiene el ELF
 	for (; ph < eph; ph++) {
 		// Para cada program header debemos
-		// 1. Ver si ph->ptype == ELF_PROG_LOAD
+		// 1. Ver si ph->p_type == ELF_PROG_LOAD
 		// 2. Reservar y mapear en ph->p_va ph->p_memsz bytes
-		// 3. Copiar pg->p_filesz bytes desde binary+ph->p_offset
+		// 3. Copiar ph->p_filesz bytes desde binary+ph->p_offset
 		//    a la va ph->p_va
 		// 4. Setear a 0 todos los bytes que no se usaron (memsz>filesz)
+		if (ph->p_type == ELF_PROG_LOAD) {
+			continue;
+		}
+		region_alloc(e, ph->p_va, ph->p_memsz);
+		memcpy(ph->p_va, binary + ph->p_offset, ph->p_filesz);
+		memset(ph->p_va + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
 	}
 	// LAB 3: Your code here.
 
