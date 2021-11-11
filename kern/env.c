@@ -353,12 +353,12 @@ load_icode(struct Env *e, uint8_t *binary)
 	//  What?  (See env_run() and env_pop_tf() below.)
 	struct Proghdr *ph, *eph;
 	struct Elf *elf_hdr = (struct Elf *) binary;
-	
+
 	// Puntero al program header inicial
 	ph = (struct Proghdr *) (binary + elf_hdr->e_phoff);
 	// Puntero al program header final
 	eph = ph + elf_hdr->e_phnum;
-	
+
 	// Itera los e_phnum headers que tiene el ELF
 	for (; ph < eph; ph++) {
 		// Para cada program header debemos
@@ -366,7 +366,7 @@ load_icode(struct Env *e, uint8_t *binary)
 		// 2. Reservar y mapear en ph->p_va ph->p_memsz bytes
 		// 3. Copiar pg->p_filesz bytes desde binary+ph->p_offset
 		//    a la va ph->p_va
-		// 4. Setear a 0 todos los bytes que no se usaron memsz>filesz
+		// 4. Setear a 0 todos los bytes que no se usaron (memsz>filesz)
 	}
 	// LAB 3: Your code here.
 
