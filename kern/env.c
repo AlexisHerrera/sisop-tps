@@ -360,6 +360,7 @@ load_icode(struct Env *e, uint8_t *binary)
 	eph = ph + elf_hdr->e_phnum;
 
 	// Itera los e_phnum headers que tiene el ELF
+	lcr3((uint32_t) e->env_pgdir);
 	for (; ph < eph; ph++) {
 		// Para cada program header debemos
 		// 1. Ver si ph->p_type == ELF_PROG_LOAD
@@ -367,19 +368,23 @@ load_icode(struct Env *e, uint8_t *binary)
 		// 3. Copiar ph->p_filesz bytes desde binary+ph->p_offset
 		//    a la va ph->p_va
 		// 4. Setear a 0 todos los bytes que no se usaron (memsz>filesz)
-		if (ph->p_type == ELF_PROG_LOAD) {
+		if (ph->p_type != ELF_PROG_LOAD) {
 			continue;
 		}
-		region_alloc(e, ph->p_va, ph->p_memsz);
-		memcpy(ph->p_va, binary + ph->p_offset, ph->p_filesz);
-		memset(ph->p_va + ph->p_filesz, 0, ph->p_memsz - ph->p_filesz);
+		region_alloc(e, (void *) ph->p_va, ph->p_memsz);
+		memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
+		memset((void *) ph->p_va + ph->p_filesz,
+		       0,
+		       ph->p_memsz - ph->p_filesz);
 	}
+	lcr3((uint32_t) kern_pgdir);
 	// LAB 3: Your code here.
 
 	// Now map one page for the program's initial stack
 	// at virtual address USTACKTOP - PGSIZE.
-
+	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE);
 	// LAB 3: Your code here.
+	e->env_tf.tf_eip = (uintptr_t) elf_hdr->e_entry;
 }
 
 //
