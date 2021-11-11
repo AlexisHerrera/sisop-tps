@@ -276,20 +276,26 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
-	void *aligned_va = ROUNDDOWN(va, PGSIZE);
-	size_t needed_memory = ROUNDUP(va + len, PGSIZE);
+	// size_t len = 0x00000ffe (0x1000 es un PGSIZE)
+	// (intptr_t) va = 0xffff1001
+	// intptr_t start_va = 0xffff1000 (redondea para abajo 1)
+	// intptr_t end_va_mem = 0xffff2000 (redondea para arriba 1)
+	// size_t pages_needed = 0x1000/4096 = 1 page
+	intptr_t start_va = ROUNDDOWN((intptr_t) va, PGSIZE);
+	intptr_t end_va_mem = ROUNDUP((intptr_t) va + len, PGSIZE);
+	size_t pages_needed = (end_va_mem - start_va) / PGSIZE;
 
-	for (int i = needed_memory / PGSIZE; i > 0; i--) {
+	for (int i = pages_needed; i > 0; i--) {
 		struct PageInfo *page = page_alloc(false);
 		if (page == NULL) {
 			panic("Not enough memory for allocating new page for "
 			      "env");
 		}
-		if (page_insert(e->env_pgdir, page, aligned_va, PTE_W | PTE_U) <
+		if (page_insert(e->env_pgdir, page, (void *) start_va, PTE_W | PTE_U) <
 		    0) {
 			panic("Page table has not enough space for env");
 		}
-		aligned_va += PGSIZE;
+		start_va += PGSIZE;
 	}
 }
 
