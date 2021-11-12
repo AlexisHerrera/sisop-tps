@@ -360,7 +360,7 @@ load_icode(struct Env *e, uint8_t *binary)
 	eph = ph + elf_hdr->e_phnum;
 
 	// Itera los e_phnum headers que tiene el ELF
-	lcr3((uint32_t) e->env_pgdir);
+	lcr3(PADDR(e->env_pgdir));
 	for (; ph < eph; ph++) {
 		// Para cada program header debemos
 		// 1. Ver si ph->p_type == ELF_PROG_LOAD
@@ -377,7 +377,7 @@ load_icode(struct Env *e, uint8_t *binary)
 		       0,
 		       ph->p_memsz - ph->p_filesz);
 	}
-	lcr3((uint32_t) kern_pgdir);
+	lcr3(PADDR(kern_pgdir));
 	// LAB 3: Your code here.
 
 	// Now map one page for the program's initial stack
