@@ -359,8 +359,8 @@ load_icode(struct Env *e, uint8_t *binary)
 	// Puntero al program header final
 	eph = ph + elf_hdr->e_phnum;
 
-	// Itera los e_phnum headers que tiene el ELF
 	lcr3(PADDR(e->env_pgdir));
+	// Itera los e_phnum headers que tiene el ELF
 	for (; ph < eph; ph++) {
 		// Para cada program header debemos
 		// 1. Ver si ph->p_type == ELF_PROG_LOAD

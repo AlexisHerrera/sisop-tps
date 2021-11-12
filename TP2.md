@@ -20,13 +20,24 @@ la direccion de la tabla gdt (24bits).
 Sin embargo esta gdt ya esta cargada, y la instrucción lgdt solo carga estos 48 bits (6 bytes)
 en el registro GDTR.
 
-...
-
-
 env_pop_tf
 ----------
+1) 
+Al ejecutar la instrucción "movl %0,%%esp" el stack pointer ahora apunta al trapframe. 
+Entonces en el tope de la pila tiene un trapframe, el cual los primeros 32 bytes son 
+los 8 registros de propósito general. Luego popal se encarga de restaurar estos registros.
 
-...
+Después de restaurar los registros ES, DS y también de saltearse tf_trapno y tf_errcode, el stack pointer
+apunta al primer registro del conjunto [EIP, CS, E_FLAGS, ESP, SS], es decir EIP.
+
+Como se puede ver, el tercer elemento de la pila es el registro e_flags, el cual contiene el estado actual
+del procesador.
+
+2)
+
+El nivel de privilegio actual o CPL se puede saber según los últimos 2 bits del registro CS.
+Entonces el CPU va a poder comparar el CS del trapframe con el CS actual, para ver si también popea
+al ESP y al SS (que sucede cuando se retorna a un nivel de privilegio inferior).
 
 
 gdb_hello
