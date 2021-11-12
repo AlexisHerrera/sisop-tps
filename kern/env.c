@@ -403,7 +403,8 @@ env_create(uint8_t *binary, enum EnvType type)
 	if (err < 0) {
 		panic("env_create: %e", err);
 	}
-    load_icode(new_env, binary);
+	load_icode(new_env, binary);
+	new_env->env_type = type;
 }
 
 //
