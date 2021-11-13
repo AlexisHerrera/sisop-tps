@@ -157,16 +157,16 @@ Las primeras dos líneas (8 ints) perteneces a los registros de propósito comú
 
 ```bash
 0xf01c6000:	0x00000000	0x00000000	0x00000000	0x00000000
-			reg_edi		reg_esi		reg_ebp		reg_oesp
+            reg_edi     reg_esi     reg_ebp     reg_oesp
 0xf01c6010:	0x00000000	0x00000000	0x00000000	0x00000000
-			reg_ebx		reg_edx		reg_ecx		reg_eax
+            reg_ebx     reg_edx     reg_ecx     reg_eax
 ```
 
 La tercera linea corresponde a lo siguiente:
 
 ```bash
 0xf01c6020:	0x00000023	0x00000023	0x00000000	0x00000000
-		   padding1|es	padding2|ds	tf_trapno	tf_err		
+            padding1|es padding2|ds tf_trapno   tf_err		
 ```
 Notar que al ser little endian, primero se ubica el es o ds y luego el padding.
 El ES y DS estan seteados a 0x23 porque en el env_alloc se hizo:
@@ -180,7 +180,7 @@ La cuarta linea:
 
 ```bash
 0xf01c6030:	0x00800020	0x0000001b	0x00000000	0xeebfe000
-			tf_eip		padding3|cs	tf_eflags	tf_esp
+            tf_eip      padding3|cs tf_eflags   tf_esp
 ```
 Donde tf_eip es la dirección de la instrucción que va a correr el proceso, en este caso hello.
 
@@ -191,7 +191,7 @@ Y por último tf_esp es el stack pointer que va a tener el proceso. En este caso
 La quinta y última linea:
 ```bash
 0xf01c6040:	0x00000023
-			padding4|ss
+            padding4|ss
 ```
 Es simplemente otro registro que se marca en el env_alloc.
 
