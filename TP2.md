@@ -4,8 +4,27 @@ TP2: Procesos de usuario
 env_alloc
 ---------
 
-1. Se le asignan los id 0x1000, 0x2000, 0x3000, 0x4000, 0x5000
-2. Serán distintos env_id distintos como los que se obtuvieron en 1.
+1. Se le asignan los id 0x1000, 0x1001, 0x1002, 0x1003, 0x1004 a los 5 primeros procesos.
+Esto sucede porque para generar el id se hace lo siguiente:
+a) La base del id es 0x1000 (por el shift a la izquierda de ENVGENSHIFT bits)
+b) A eso se le suma el env_id del proceso. En este caso 0 al iniciarse todo el array envs en 0.
+c) Se limpia los ultimos 10 bits (lo hace el ~(NENV-1)).
+
+Por ultimo se hace un or de la base del id (0x1000) con el offset del nuevo environment.
+Lo cual permite variar los ids de manera incremental. 
+
+2. Si se lanzan NENV(1024) environments/procesos y luego se destruye el proceso 630
+el cual tiene env_id 0x1000+630 = 0x1276, entonces al crear y matar un proceso de manera
+consecutiva los env_id serán:
+a) Para el primer proceso, primero sucederá que el env_id no es igual a 0 sino
+que es el que tenía antes (0x1276), y a este se le suma 0x1000 y se limpian los ultimos 10 bits.
+Entonces queda por el momento como 0x2000
+b) Luego se le aplica un or con la posición en el arreglo, en este caso 630. Lo cual lo deja con
+0x2276.
+
+Si aplicamos este proceso una y otra vez (sin matar o agregar un proceso en medio), simplemente
+estaremos sumando 0x1000 al env_id. Por lo que las primeras 5 iteraciones serán:
+0x2276, 0x3276, 0x4276, 0x5276, 0x6276.
 
 
 env_init_percpu
