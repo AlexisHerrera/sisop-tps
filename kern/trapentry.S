@@ -46,10 +46,28 @@
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
-
-
+TRAPHANDLER_NOEC(trap_0_de, 0)
 
 /*
  * Lab 3: Your code here for _alltraps
  */
+_alltraps:
+	/* Cargar los registros del tf al stack*/
+	
+	/* pushl se encarga del padding*/
+	pushl %ds
+	pushl %es
+	pushal /*tf_regs*/
 
+	/*
+	 * Ahora que el stack tiene cargado el tf
+	 * hay que pasarle el puntero al tf
+	*/
+	pushl %esp
+
+	/* Se va a utilizar el DS del kernel*/
+	mov $GD_KT, %ax
+	mov %ax, %ds
+	mov %ax, %es
+	
+	call trap
