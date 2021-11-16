@@ -46,7 +46,7 @@
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
-TRAPHANDLER_NOEC(trap_0_de, 0)
+TRAPHANDLER_NOEC(trap_0_de, T_DIVIDE)
 
 /*
  * Lab 3: Your code here for _alltraps

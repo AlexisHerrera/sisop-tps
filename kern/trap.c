@@ -64,7 +64,7 @@ trap_init(void)
 	// Seteo la tabla de descriptores
 	extern void trap_0_de();
 	SETGATE(idt[0], 0, GD_KT, trap_0_de, 0);
-	
+
 	// Per-CPU setup
 	trap_init_percpu();
 }
