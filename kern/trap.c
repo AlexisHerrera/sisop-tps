@@ -207,10 +207,10 @@ trap_dispatch(struct Trapframe *tf)
 	switch (tf->tf_trapno) {
 	case T_BRKPT:
 		monitor(tf);
-		break;
+		return;
 	case T_PGFLT:
 		page_fault_handler(tf);
-		break;
+		return;
 	case T_SYSCALL:;
 		uint32_t num, a1, a2, a3, a4, a5, result;
 		num = tf->tf_regs.reg_eax;
@@ -221,7 +221,7 @@ trap_dispatch(struct Trapframe *tf)
 		a5 = tf->tf_regs.reg_esi;
 		result = syscall(num, a1, a2, a3, a4, a5);
 		tf->tf_regs.reg_eax = result;
-		break;
+		return;
 	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
