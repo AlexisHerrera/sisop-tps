@@ -60,10 +60,71 @@ trapname(int trapno)
 void
 trap_init(void)
 {
+	extern struct Segdesc gdt[];
 	// LAB 3: Your code here.
 	// Seteo la tabla de descriptores
 	extern void trap_0_de();
-	SETGATE(idt[0], 0, GD_KT, trap_0_de, 0);
+	SETGATE(idt[T_DIVIDE], 0, GD_KT, trap_0_de, 0);
+
+	extern void trap_1_db();
+	SETGATE(idt[T_DEBUG], 0, GD_KT, trap_1_db, 0);
+
+	extern void trap_2_nmi();
+	SETGATE(idt[T_NMI], 0, GD_KT, trap_2_nmi, 0);
+
+	extern void trap_3_bp();
+	SETGATE(idt[T_BRKPT], 0, GD_KT, trap_3_bp, 3);
+
+	extern void trap_4_of();
+	SETGATE(idt[T_OFLOW], 0, GD_KT, trap_4_of, 0);
+
+	extern void trap_5_br();
+	SETGATE(idt[T_BOUND], 0, GD_KT, trap_5_br, 0);
+
+	extern void trap_6_ud();
+	SETGATE(idt[T_ILLOP], 0, GD_KT, trap_6_ud, 0);
+
+	extern void trap_7_nm();
+	SETGATE(idt[T_DEVICE], 0, GD_KT, trap_7_nm, 0);
+
+	extern void trap_8_df();
+	SETGATE(idt[T_DBLFLT], 0, GD_KT, trap_8_df, 0);
+
+	extern void trap_10_ts();
+	SETGATE(idt[T_TSS], 0, GD_KT, trap_10_ts, 0);
+
+	extern void trap_11_np();
+	SETGATE(idt[T_SEGNP], 0, GD_KT, trap_11_np, 0);
+
+	extern void trap_12_ss();
+	SETGATE(idt[T_STACK], 0, GD_KT, trap_12_ss, 0);
+
+	extern void trap_13_gp();
+	SETGATE(idt[T_GPFLT], 0, GD_KT, trap_13_gp, 0);
+
+	extern void trap_14_pf();
+	SETGATE(idt[T_PGFLT], 0, GD_KT, trap_14_pf, 0);
+
+	extern void trap_16_mf();
+	SETGATE(idt[T_FPERR], 0, GD_KT, trap_16_mf, 0);
+
+	extern void trap_17_ac();
+	SETGATE(idt[T_ALIGN], 0, GD_KT, trap_17_ac, 0);
+
+	extern void trap_18_mc();
+	SETGATE(idt[T_MCHK], 0, GD_KT, trap_18_mc, 0);
+
+	extern void trap_19_xm();
+	SETGATE(idt[T_SIMDERR], 0, GD_KT, trap_19_xm, 0);
+
+	extern void trap_20_ve();
+	SETGATE(idt[20], 0, GD_KT, trap_20_ve, 0);
+
+	extern void trap_48_sc();
+	SETGATE(idt[T_SYSCALL], 0, GD_KT, trap_48_sc, 3);
+
+	// extern void trap_500_ca();
+	// SETGATE(idt[T_SIMDERR], 0, GD_KT, trap_500_ca, 0);
 
 	// Per-CPU setup
 	trap_init_percpu();
@@ -142,6 +203,26 @@ trap_dispatch(struct Trapframe *tf)
 {
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
+
+	switch (tf->tf_trapno) {
+	case T_BRKPT:
+		monitor(tf);
+		break;
+	case T_PGFLT:
+		page_fault_handler(tf);
+		break;
+	case T_SYSCALL:;
+		uint32_t num, a1, a2, a3, a4, a5, result;
+		num = tf->tf_regs.reg_eax;
+		a1 = tf->tf_regs.reg_edx;
+		a2 = tf->tf_regs.reg_ecx;
+		a3 = tf->tf_regs.reg_ebx;
+		a4 = tf->tf_regs.reg_edi;
+		a5 = tf->tf_regs.reg_esi;
+		result = syscall(num, a1, a2, a3, a4, a5);
+		tf->tf_regs.reg_eax = result;
+		break;
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
