@@ -277,3 +277,20 @@ EIP=0000e05b EFL=00000002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0000 00000000 0000ffff 00009300
 CS =f000 000f0000 0000ffff 00009b00
 ```
+
+evil_hello
+---------
+
+La diferencia entre ambas funciones es que la original no provoca un page fault, en cambio la que se muestra sí.
+Esto es porque no existe un mecanismo hasta el momento para verificar si la dirección que se le indica a ```sys_cputs``` la puede acceder el usuario. Ya que dicha syscall se ejecuta en el kernel, y aqui sí está mapeada la dirección  ```0xf010000c```. Esta se ejecuta en el ring 0.
+
+En cambio, al hacer ```char first = *entry ``` 
+ se accede a la dirección ```0xf010000c``` desde un proceso de usuario (ring 3), el cual no tiene mapeada dicha dirección.
+
+Se puede poner un break en ```trap_dispatch``` y comprobar que se handlea una interrupción de este tipo.
+
+Al ejecutar el ```page_fault_handler```, este mata al proceso y por lo tanto nunca se ejecuta ```sys_cputs```.
+
+Esto sí es un problema porque para el kernel, las direcciones que pide el usuario acceder sí las conoce y por lo tanto no genera un page fault.
+Además, el kernel tiene permisos para acceder a cualquier dirección de memoria, asi que para el no presenta ningún problema.
+

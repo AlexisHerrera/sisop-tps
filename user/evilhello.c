@@ -3,10 +3,18 @@
 
 #include <inc/lib.h>
 
+// void
+// umain(int argc, char **argv)
+// {
+// 	// try to print the kernel entry point as a string!  mua ha ha!
+// 	char good_hello[] = "Hola\n";
+// 	sys_cputs(good_hello, 100);
+// }
 void
 umain(int argc, char **argv)
 {
-	// try to print the kernel entry point as a string!  mua ha ha!
-	sys_cputs((char*)0xf010000c, 100);
+    char *entry = (char *) 0xf010000c;
+    char first = *entry;
+    sys_cputs(&first, 1);
 }
 
