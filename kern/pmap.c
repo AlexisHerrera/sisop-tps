@@ -628,7 +628,8 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 	intptr_t end_va_mem = ROUNDUP((intptr_t) va + len, PGSIZE);
 
 	for (intptr_t act_va = start_va; act_va < end_va_mem; act_va += PGSIZE) {
-		pte_t *table_entry = pgdir_walk(env->env_pgdir,(const void *) act_va, 0);
+		pte_t *table_entry =
+		        pgdir_walk(env->env_pgdir, (const void *) act_va, 0);
 		bool is_below_ulim = act_va < ULIM;
 		bool has_permission_pte =
 		        ((*table_entry) & (perm | PTE_P)) == (perm | PTE_P);

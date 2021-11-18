@@ -282,15 +282,27 @@ evil_hello
 ---------
 
 La diferencia entre ambas funciones es que la original no provoca un page fault, en cambio la que se muestra sí.
-Esto es porque no existe un mecanismo hasta el momento para verificar si la dirección que se le indica a ```sys_cputs``` la puede acceder el usuario. Ya que dicha syscall se ejecuta en el kernel, y aqui sí está mapeada la dirección  ```0xf010000c```. Esta se ejecuta en el ring 0.
+Esto es porque no existe un mecanismo hasta el momento para verificar si la dirección que se le indica a ```sys_cputs``` la puede acceder el usuario. Ya que dicha syscall se ejecuta en el kernel, y aqui está mapeada la dirección  ```0xf010000c``` y también tiene permisos.
 
 En cambio, al hacer ```char first = *entry ``` 
- se accede a la dirección ```0xf010000c``` desde un proceso de usuario (ring 3), el cual no tiene mapeada dicha dirección.
+se accede a la dirección ```0xf010000c``` desde un proceso de usuario (ring 3), pero para acceder hay que tener permisos del kernel.
 
-Se puede poner un break en ```trap_dispatch``` y comprobar que se handlea una interrupción de este tipo.
+Se puede poner un break en ```trap_dispatch``` y comprobar que se handlea un page fault, al ejecutar dicha linea.
 
 Al ejecutar el ```page_fault_handler```, este mata al proceso y por lo tanto nunca se ejecuta ```sys_cputs```.
 
-Esto sí es un problema porque para el kernel, las direcciones que pide el usuario acceder sí las conoce y por lo tanto no genera un page fault.
-Además, el kernel tiene permisos para acceder a cualquier dirección de memoria, asi que para el no presenta ningún problema.
+Esto sí es un problema porque para el kernel, las direcciones que pide el usuario acceder sí las conoce y tiene permiso, por lo tanto no genera un page fault.
+
+Ejercicio 9
+---------
+
+Tras implementar ```user_mem_check``` y verificar en ```sys_cputs``` los permisos, al correr buggyhello pasa lo siguiente:
+```bash
+[00001000] user_mem_check assertion failure for va 00000001
+[00001000] free env 00001000
+Destroyed the only environment - nothing more to do!
+```
+Es decir, se destruye el environment, y el kernel no lanza un panic, en otras palabras ```user_mem_check``` capturó el error .
+Se agrega la verificación debuginfo_eip a las estructuras de debugging usd, stabs y stabstr (sin embargo, son del ejercicio 8 de la consigna original porque user/breakpoint no hace un panic). 
+
 
