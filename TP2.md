@@ -277,6 +277,58 @@ EIP=0000e05b EFL=00000002 [-------] CPL=0 II=0 A20=1 SMM=0 HLT=0
 ES =0000 00000000 0000ffff 00009300
 CS =f000 000f0000 0000ffff 00009b00
 ```
+kern_idt
+---------
+1)
+```TRAPHANDLER``` y ```TRAPHANDLER_NOEC``` definen una función globalmente visible para handlear una interrupción. Luego de definirlas, las cargamos en la tabla IDT.
+
+Para decidir cual usar se debe tener en cuenta que hay interrupciones que al handlearlas pushea un error code y otras que no.
+Para saber cual elegir, se debe tener como referencia el manual de Intel (en este caso).
+
+Si solo se usara la primera, se asumiria que siempre se pushea el error code, por lo que al cargar nuestro ```struct trapframe``` lo haríamos con 
+registros/atributos incorrectos. Entonces al popearlos tendríamos de manera incorrecta, por ejemplo, el eip y esto llevaría a un page fault.
+
+2)
+La diferencia está en que si istrap es 1, se permite anidación de interrupciones. Es decir, se puede handlear una interrupción mientras que se estaba handleando otra, por ejemplo para priorizar una interrupcion de I/O.
+
+Este feature es deseable para Kernels "reales", ya que sino interrupciones más importantes tendrían que esperar que finalice otras menos importantes como por ejemplo un overflow.
+
+3)
+El programa trata de generar un Page Fault o int 14. Sin embargo la interrupción que se genera es la 13, también conocida como General Protection.
+Esto sucede porque se intentó ejecutar una interrupción desde el ring 3, cuando los permisos necesarios para ejecutarla son del ring 0.
+
+Entonces, en vez de ejecutarse esa interrupción, se ve que como no tenía ese privilegio entonces se ejecuto la 13.
+Para comprobar si este es el caso, podríamos cambiar el permiso de la interrupt a 3, y vemos que:
+
+```diff
+- SETGATE(idt[T_PGFLT], 0, GD_KT, trap_14_pf, 0);
++ SETGATE(idt[T_PGFLT], 0, GD_KT, trap_14_pf, 3);
+```
+```bash
+Incoming TRAP frame at 0xefffffc0
+[00001000] user fault va 00000000 ip 0000001b
+TRAP frame at 0xefffffc0
+  edi  0x00000000
+  esi  0x00000000
+  ebp  0xeebfdff0
+  oesp 0xefffffe0
+  ebx  0x00000000
+  edx  0x00000000
+  ecx  0x00000000
+  eax  0x00000000
+  es   0x----0023
+  ds   0x----0023
+  trap 0x0000000e Page Fault
+  cr2  0x00000000
+  err  0x00800039 [kernel, read, protection]
+  eip  0x0000001b
+  cs   0x----0082
+  flag 0xeebfdfd4
+  esp  0x00000023
+  ss   0x----ff53
+[00001000] free env 00001000
+```
+Es decir, se genera la interrupción page fault. 
 
 evil_hello
 ---------
