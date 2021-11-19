@@ -292,17 +292,3 @@ Se puede poner un break en ```trap_dispatch``` y comprobar que se handlea un pag
 Al ejecutar el ```page_fault_handler```, este mata al proceso y por lo tanto nunca se ejecuta ```sys_cputs```.
 
 Esto sí es un problema porque para el kernel, las direcciones que pide el usuario acceder sí las conoce y tiene permiso, por lo tanto no genera un page fault.
-
-Ejercicio 9
----------
-
-Tras implementar ```user_mem_check``` y verificar en ```sys_cputs``` los permisos, al correr buggyhello pasa lo siguiente:
-```bash
-[00001000] user_mem_check assertion failure for va 00000001
-[00001000] free env 00001000
-Destroyed the only environment - nothing more to do!
-```
-Es decir, se destruye el environment, y el kernel no lanza un panic, en otras palabras ```user_mem_check``` capturó el error .
-Se agrega la verificación debuginfo_eip a las estructuras de debugging usd, stabs y stabstr (sin embargo, son del ejercicio 8 de la consigna original porque user/breakpoint no hace un panic). 
-
-
