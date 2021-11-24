@@ -324,6 +324,8 @@ page_init(void)
 	// LAB 4:
 	// Change your code to mark the physical page at MPENTRY_PADDR
 	// as in use
+	_Static_assert(MPENTRY_PADDR % PGSIZE == 0,
+               "MPENTRY_PADDR is not page-aligned");
 
 	// The example code here marks all physical pages as free.
 	// However this is not truly the case.  What memory is free?
@@ -352,6 +354,9 @@ page_init(void)
 		// memoria "PADDR(boot_alloc(0))" es el fin del arreglo de pages
 		bool is_free_page = page_address >= PADDR(boot_alloc(0)) ||
 		                    page_address < IOPHYSMEM;
+		if (page_address == MPENTRY_PADDR) {
+			is_free_page = false;
+		}
 		if (is_free_page) {
 			pages[i].pp_ref = 0;
 			pages[i].pp_link = page_free_list;
