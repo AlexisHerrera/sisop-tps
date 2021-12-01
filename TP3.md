@@ -23,9 +23,15 @@ Si ejecutamos ```objdump -d obj/kern/mpentry.o``` podemos ver que en la direcci�
 Entonces si este código está copiado en la dirección MPENTRY_PADDR (0x7000), el EIP deberá estar en la dirección 0x7032.
 Recordando que se trabaja ejecuta en la dirección física, ya que cada AP está en modo real.
 
+env_return
+--------------
 
+La funcion ```libmain()``` de libmain.c, se encarga de tomar el proceso actual, y ejecutar el ```umain()```.
+Una vez finalizada la ejecución (y sus respectivas llamadas a las syscalls), se finaliza el proceso con un ```exit()```.
 
+Antes ```env_destroy()``` simplemente llamaba a ```env_free()``` e iniciaba el monitor. Ahora puede que el proceso que se intente destruir aún siga ejecutándose en otro CPU (y por lo tanto el estado aún en ENV_RUNNING). Entonces se lo marca como zombie (porque aún no se lo puede matar), pero la próxima vez que lo trapee el kernel, si liberará en proceso.
 
+Si el mismo proceso es el que se debe liberar, entonces se marca que el CPU actual no está corriendo ningún proceso y se fuerza un cambio de contexto.
 
 
 
