@@ -29,7 +29,35 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
-
+	size_t index_start = 0;
+	size_t idx_last_env = 0;
+	if (curenv != NULL) {
+		idx_last_env = ENVX(curenv->env_id);
+		index_start = idx_last_env + 1;
+	}
+	// Si es el primer proceso, se inicia desde 0 hasta NENV
+	// Sino va desde idx_last_env + 1
+	for (size_t i = index_start; i < NENV; i++) {
+		if (envs[i].env_status == ENV_RUNNABLE) {
+			env_run(&envs[i]);
+			return;
+		}
+	}
+	// Si se empezó desde el idx_last_env + 1, faltan ver
+	// los envs desde 0 hasta idx_last_env
+	if (curenv != NULL) {
+		for (size_t i = 0; i < idx_last_env; i++) {
+			if (envs[i].env_status == ENV_RUNNABLE) {
+				env_run(&envs[i]);
+				return;
+			}
+		}
+	}
+	// Si no se encontró (y no es el primer proceso), se elige el
+	// último proceso corriendo
+	if (curenv != NULL && envs[idx_last_env].env_status == ENV_RUNNING) {
+		env_run(&envs[idx_last_env]);
+	}
 	// sched_halt never returns
 	sched_halt();
 }
