@@ -45,6 +45,7 @@ sched_yield(void)
 	}
 	// Si se empezó desde el idx_last_env + 1, faltan ver
 	// los envs desde 0 hasta idx_last_env
+	// Si no me equivoco puedo eliminar el if...
 	if (curenv != NULL) {
 		for (size_t i = 0; i < idx_last_env; i++) {
 			if (envs[i].env_status == ENV_RUNNABLE) {
