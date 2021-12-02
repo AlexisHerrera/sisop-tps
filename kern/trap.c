@@ -132,7 +132,7 @@ trap_init(void)
 	// extern void trap_500_ca();
 	// SETGATE(idt[T_SIMDERR], 0, GD_KT, trap_500_ca, 0);
 	extern void trap_irq_timer_0();
-	SETGATE(idt[IRQ_OFFSET+IRQ_TIMER], 0, GD_KT, trap_irq_timer_0, 0);
+	SETGATE(idt[IRQ_OFFSET + IRQ_TIMER], 0, GD_KT, trap_irq_timer_0, 0);
 	// Per-CPU setup
 	trap_init_percpu();
 }
