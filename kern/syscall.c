@@ -117,7 +117,17 @@ sys_env_set_status(envid_t envid, int status)
 	// envid's status.
 
 	// LAB 4: Your code here.
-	panic("sys_env_set_status not implemented");
+	int r;
+	struct Env *env;
+	if ((r = envid2env(envid, &env, 1)) < 0) {
+		return r;
+	}
+	if (env->env_status != ENV_RUNNABLE &&
+	    env->env_status != ENV_NOT_RUNNABLE) {
+		return -E_INVAL;
+	}
+	env->env_status = status;
+	return 0;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -162,7 +172,35 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   allocated!
 
 	// LAB 4: Your code here.
-	panic("sys_page_alloc not implemented");
+	struct Env *env;
+	int r;
+	if ((r = envid2env(envid, &env, 1)) < 0) {
+		return r;  // -E_BAD_ENV
+	}
+
+	// PGOFF(va) es 0 si está alineado
+	if ((uintptr_t) va >= UTOP || PGOFF(va)) {
+		return -E_INVAL;
+	}
+	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
+	bool has_accepted_perm = (perm & PTE_AVAIL) == PTE_AVAIL;
+	if (!has_basic_perm || !has_accepted_perm) {
+		return -E_INVAL;
+	}
+
+	struct PageInfo *page = page_alloc(ALLOC_ZERO);
+	if (page == NULL) {
+		return -E_NO_MEM;
+	}
+
+	// Page insert se encarga del caso cuando ya está mapeada
+	r = page_insert(curenv->env_pgdir, page, va, perm);
+	if (r < 0) {
+		page_free(page);
+		return r;  // -E_NO_MEM
+	}
+
+	return 0;
 }
 
 // Map the page of memory at 'srcva' in srcenvid's address space
