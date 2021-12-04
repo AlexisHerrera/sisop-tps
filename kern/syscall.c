@@ -84,7 +84,20 @@ sys_exofork(void)
 	// will appear to return 0.
 
 	// LAB 4: Your code here.
-	panic("sys_exofork not implemented");
+	struct Env *env;
+	int r;
+	if ((r = env_alloc(&env, curenv->env_id)) < 0) {
+		return r;
+	}
+	env->env_status = ENV_NOT_RUNNABLE;
+	// Se copia los registros
+	memcpy(&env->env_tf, &curenv->env_tf, sizeof(struct Trapframe));
+	// Recordar que estamos en el kernel.
+	// Para retornar 0 en la syscall (al usuario)
+	// hay que cargar 0 en el registro eax del environment.
+	// Este return (env->env_id) solo queda en el contexto del kernel
+	env->env_tf.tf_regs.reg_eax = 0;
+	return env->env_id;
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE

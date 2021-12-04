@@ -78,3 +78,11 @@ Luego cuando el round-robin vuelva al proceso, imprimirá el mensaje ```Back in 
 Es por esto que podemos ver como se van alternando los env_id, y recién hasta que vuelve al proceso que forzó el context switch, se imprime el mensaje.
 
 Finalmente, podemos ver que una vez que el proceso haya vuelto e imprimido su último mensaje (por ejemplo ```Back in environment 00001000, iteration 4, CPU 0```), simplemente indica que se realizó todo en ese proceso y se libera.
+
+envid2env
+--------------
+
+La función ```envid2env``` al pasarle un id con valor 0, te devuelve el environment actual.
+Por lo que al pasarle a ```sys_env_destroy``` un id con valor 0, este obtiene de  ```envid2env``` el ```struct env *``` al mismo environment que está corriendo. 
+
+Para luego imprimir un mensaje de "exiting gracefully", y finalizar terminando el proceso con ```env_destroy```. 
