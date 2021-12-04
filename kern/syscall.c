@@ -183,7 +183,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 		return -E_INVAL;
 	}
 	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
-	bool has_accepted_perm = (perm & PTE_AVAIL) == PTE_AVAIL;
+	bool has_accepted_perm = (perm & (~PTE_AVAIL)) != 0;
 	if (!has_basic_perm || !has_accepted_perm) {
 		return -E_INVAL;
 	}
@@ -230,7 +230,51 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	panic("sys_page_map not implemented");
+	struct Env *src_env;
+	struct Env *dst_env;
+	int r;
+	if ((r = envid2env(srcenvid, &src_env, 1)) < 0) {
+		return r;  // -E_BAD_ENV
+	}
+	if ((r = envid2env(dstenvid, &dst_env, 1)) < 0) {
+		return r;  // -E_BAD_ENV
+	}
+
+	// Alineación de las va de src y dst
+	if ((uintptr_t) srcva >= UTOP || PGOFF(srcva)) {
+		return -E_INVAL;
+	}
+	if ((uintptr_t) dstva >= UTOP || PGOFF(dstva)) {
+		return -E_INVAL;
+	}
+
+	// Permisos
+	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
+	bool has_accepted_perm = (perm & (~PTE_AVAIL)) != 0;
+	if (!has_basic_perm || !has_accepted_perm) {
+		return -E_INVAL;
+	}
+	// Primero se obtiene la pagina source
+	// Utilizamos el pte para verificar permisos
+	pte_t *pte;
+	struct PageInfo *page = page_lookup(src_env->env_pgdir, srcva, &pte);
+	if (page == NULL) {
+		return -E_INVAL;
+	}
+
+	// No debe pasar que perm tiene permisos de escritura
+	// y la pte no tenga esos permisos.
+	if ((perm & PTE_W) && !(*pte & PTE_W)) {
+		return -E_INVAL;
+	}
+
+	// Luego se inserta la pagina en la va de destino
+	r = page_insert(dst_env->env_pgdir, page, dstva, perm);
+	if (r < 0) {
+		return r;  // -E_NO_MEM
+	}
+
+	return 0;
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -246,7 +290,26 @@ sys_page_unmap(envid_t envid, void *va)
 	// Hint: This function is a wrapper around page_remove().
 
 	// LAB 4: Your code here.
-	panic("sys_page_unmap not implemented");
+	struct Env *env;
+	int r;
+	if ((r = envid2env(envid, &env, 1)) < 0) {
+		return r;  // -E_BAD_ENV
+	}
+
+	// PGOFF(va) es 0 si está alineado
+	if ((uintptr_t) va >= UTOP || PGOFF(va)) {
+		return -E_INVAL;
+	}
+	// Primero se obtiene la pagina source
+	pte_t *pte;
+	struct PageInfo *page = page_lookup(env->env_pgdir, va, 0);
+	// No está mapeada, simplemente retornamos
+	if (page == NULL) {
+		return 0;
+	}
+	// Esta mapeada, eliminamos la pagina
+	page_remove(env->env_pgdir, va);
+	return 0;
 }
 
 // Try to send 'value' to the target env 'envid'.
@@ -335,6 +398,16 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	case SYS_yield:
 		sys_yield();
 		return 0;
+	case SYS_exofork:
+		return sys_exofork();
+	case SYS_env_set_status:
+		return sys_env_set_status((envid_t) a1, a2);
+	case SYS_page_alloc:
+		return sys_page_alloc((envid_t)a1, (void *) a2, a3);
+	case SYS_page_map:
+		return sys_page_map((envid_t)a1, (void *) a2, (envid_t)a3, (void *) a4, a5);
+	case SYS_page_unmap:
+		return sys_page_unmap((envid_t)a1, (void *) a2);
 	default:
 		return -E_INVAL;
 	}
