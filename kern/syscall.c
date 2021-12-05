@@ -95,7 +95,8 @@ sys_exofork(void)
 	// Recordar que estamos en el kernel.
 	// Para retornar 0 en la syscall (al usuario)
 	// hay que cargar 0 en el registro eax del environment.
-	// Este return (env->env_id) solo queda en el contexto del kernel
+	// Ver que para el proceso hijo, se devuelve 0
+	// y para el padre, el proceso creado. Es decir el pid del hijo.
 	env->env_tf.tf_regs.reg_eax = 0;
 	return env->env_id;
 }
