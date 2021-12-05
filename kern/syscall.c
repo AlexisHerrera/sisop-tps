@@ -122,8 +122,7 @@ sys_env_set_status(envid_t envid, int status)
 	if ((r = envid2env(envid, &env, 1)) < 0) {
 		return r;
 	}
-	if (env->env_status != ENV_RUNNABLE &&
-	    env->env_status != ENV_NOT_RUNNABLE) {
+	if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE) {
 		return -E_INVAL;
 	}
 	env->env_status = status;
@@ -194,7 +193,7 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	}
 
 	// Page insert se encarga del caso cuando ya está mapeada
-	r = page_insert(curenv->env_pgdir, page, va, perm);
+	r = page_insert(env->env_pgdir, page, va, perm);
 	if (r < 0) {
 		page_free(page);
 		return r;  // -E_NO_MEM
@@ -403,11 +402,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	case SYS_env_set_status:
 		return sys_env_set_status((envid_t) a1, a2);
 	case SYS_page_alloc:
-		return sys_page_alloc((envid_t)a1, (void *) a2, a3);
+		return sys_page_alloc((envid_t) a1, (void *) a2, a3);
 	case SYS_page_map:
-		return sys_page_map((envid_t)a1, (void *) a2, (envid_t)a3, (void *) a4, a5);
+		return sys_page_map(
+		        (envid_t) a1, (void *) a2, (envid_t) a3, (void *) a4, a5);
 	case SYS_page_unmap:
-		return sys_page_unmap((envid_t)a1, (void *) a2);
+		return sys_page_unmap((envid_t) a1, (void *) a2);
 	default:
 		return -E_INVAL;
 	}
