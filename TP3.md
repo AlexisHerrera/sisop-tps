@@ -86,3 +86,47 @@ La función ```envid2env``` al pasarle un id con valor 0, te devuelve el environ
 Por lo que al pasarle a ```sys_env_destroy``` un id con valor 0, este obtiene de  ```envid2env``` el ```struct env *``` al mismo environment que está corriendo. 
 
 Para luego imprimir un mensaje de "exiting gracefully", y finalizar terminando el proceso con ```env_destroy```. 
+
+dumbfork
+--------------
+
+1. No, el ```duppage``` que se utiliza en ```dumbfork``` siempre crea y mapea con los permisos PTE_P|PTE_U|PTE_W, por lo tanto
+puede que el padre no tenga permisos de escritura, pero el hijo si lo va a tener.
+2. 
+```c
+envid_t dumbfork(void) {
+    // ...
+    for (addr = UTEXT; addr < end; addr += PGSIZE) {
+        bool readonly = true;
+        pde_t pde = uvpd[PDX(addr)];
+		if (pde & PTE_P) {
+			pte_t pte = uvpt[PTX(addr)];
+			if (pte & PTE_P) {
+                readonly = (pte & PTE_W) == 0;
+            }
+        }
+        duppage(envid, addr, readonly);
+    }
+    // ...
+```
+3.
+```sys_page_map``` verifica que si la página de origen tiene permisos de lectura pero la página de destino quiere guardarse con permisos de escritura, entonces devuelve -E_INVAL (error).
+Entonces en el caso de que readonly sea true, la primera llamada a sys_page_map va devolver un error, no va a hacer nada.
+
+Entonces simplemente podemos de antemano saber si es o no readonly, por lo que podemos llamar a lo sumo 3 veces a la syscall
+en una ejecución, de la siguiente manera:
+
+```c
+void duppage(envid_t dstenv, void *addr, bool readonly) {
+    sys_page_alloc(dstenv, addr, PTE_P | PTE_U | PTE_W);
+    if (!readonly) {
+        // caso donde hay write
+        sys_page_map(dstenv, addr, 0, UTEMP, PTE_P | PTE_U | PTE_W);
+    } else {
+        // caso donde es readonly
+        sys_page_map(dstenv, addr, dstenv, addr, PTE_P | PTE_U);
+    }
+    memmove(UTEMP, addr, PGSIZE);
+    sys_page_unmap(0, UTEMP);
+}
+```
