@@ -106,7 +106,7 @@ fork_v0(void)
 		pde_t pde = uvpd[PDX(addr)];
 		// Primero debe estar marcada como ocupada la pde
 		if (pde & PTE_P) {
-			pte_t pte = uvpt[PTX(addr)];
+			pte_t pte = uvpt[PGNUM(addr)];
 
 			// Si entro acá, entonces la página está mapeada
 			if (pte & PTE_P) {

@@ -118,15 +118,15 @@ en una ejecución, de la siguiente manera:
 
 ```c
 void duppage(envid_t dstenv, void *addr, bool readonly) {
-    sys_page_alloc(dstenv, addr, PTE_P | PTE_U | PTE_W);
     if (!readonly) {
         // caso donde hay write
+        sys_page_alloc(dstenv, addr, PTE_P | PTE_U | PTE_W);
         sys_page_map(dstenv, addr, 0, UTEMP, PTE_P | PTE_U | PTE_W);
+        memmove(UTEMP, addr, PGSIZE);
+        sys_page_unmap(0, UTEMP);
     } else {
         // caso donde es readonly
         sys_page_map(dstenv, addr, dstenv, addr, PTE_P | PTE_U);
     }
-    memmove(UTEMP, addr, PGSIZE);
-    sys_page_unmap(0, UTEMP);
 }
 ```
