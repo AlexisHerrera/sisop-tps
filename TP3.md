@@ -100,7 +100,7 @@ envid_t dumbfork(void) {
         bool readonly = true;
         pde_t pde = uvpd[PDX(addr)];
 		if (pde & PTE_P) {
-			pte_t pte = uvpt[PTX(addr)];
+			pte_t pte = uvpt[PGNUM(addr)];
 			if (pte & PTE_P) {
                 readonly = (pte & PTE_W) == 0;
             }
@@ -110,10 +110,10 @@ envid_t dumbfork(void) {
     // ...
 ```
 3.
-```sys_page_map``` verifica que si la página de origen tiene permisos de lectura pero la página de destino quiere guardarse con permisos de escritura, entonces devuelve -E_INVAL (error).
-Entonces en el caso de que readonly sea true, la primera llamada a sys_page_map va devolver un error, no va a hacer nada.
+```sys_page_map``` verifica si la página de origen tiene permisos de lectura pero la página de destino quiere guardarse con permisos de escritura, entonces devuelve -E_INVAL (error) y se detiene la ejecución.
+Entonces en el caso de que readonly sea true, la primera llamada a ```sys_page_map``` va devolver un error, no va a hacer nada.
 
-Entonces simplemente podemos de antemano saber si es o no readonly, por lo que podemos llamar a lo sumo 3 veces a la syscall
+Entonces de antemano podemos saber si es o no readonly, por lo que se puede llamar a lo sumo 3 veces a la syscall
 en una ejecución, de la siguiente manera:
 
 ```c
