@@ -410,7 +410,7 @@ page_fault_handler(struct Trapframe *tf)
 		// Si es recursivo, el stack del trapframe tendrá una dirección dentro
 		// del rango mencionado, ya que sucedio mientras estaba handleando una exepción.
 		bool is_recursive = (tf->tf_esp >= UXSTACKTOP - PGSIZE) &&
-		                    (tf->tf_esp < UXSTACKTOP - PGSIZE);
+		                    (tf->tf_esp < UXSTACKTOP);
 		if (is_recursive) {
 			// Recordar que utilizabamos una word para cargar el eip
 			// Entonces alojaremos el utf en el stack - 4 bytes y un

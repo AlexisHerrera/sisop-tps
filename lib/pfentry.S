@@ -70,18 +70,19 @@ _pgfault_upcall:
 	// donde está el utf_esp. Como se ve en el diagrama inicial
 	// hay que ir 48 words hasta el tope. Lo guardo en el registro
 	// comunmente utilizado como base y corro el esp 1 word para 
-	// el registro eip
+	// el registro eip. Actualizo que la posicion relativa
+	// tenga la nueva dirección (ebx-4)
     movl 48(%esp), %ebx
 	subl $0x4, %ebx
-
+	movl %ebx, 48(%esp)
 	// De manera similar, me guardo el %eip para pushearlo en el 
 	// stack del usuario.
 	movl 40(%esp), %eax
-	movl %eax, %ebx
+	movl %eax, (%ebx)
 	
 	// Muevo el esp 8 para que apunte a los registros
 	// Luego hago el popal
-	addl $8, %esp
+	addl $0x8, %esp
 	popal
 
 	// El popal nos movio el esp a la pos 40 relativa original
