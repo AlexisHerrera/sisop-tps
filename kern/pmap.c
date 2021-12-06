@@ -714,24 +714,34 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
 {
 	// LAB 3: Your code here.
 	intptr_t start_va = ROUNDDOWN((intptr_t) va, PGSIZE);
-	intptr_t end_va_mem = ROUNDUP((intptr_t) va + len, PGSIZE);
+	intptr_t end_va_mem = ROUNDUP((intptr_t)(va + len), PGSIZE);
 
 	for (intptr_t act_va = start_va; act_va < end_va_mem; act_va += PGSIZE) {
 		pte_t *table_entry =
 		        pgdir_walk(env->env_pgdir, (const void *) act_va, 0);
-		bool is_below_ulim = act_va < ULIM;
-		bool has_permission_pte =
-		        ((*table_entry) & (perm | PTE_P)) == (perm | PTE_P);
-
-		if (is_below_ulim && has_permission_pte) {
-			continue;
-		} else {
-			user_mem_check_addr = (uintptr_t) act_va;
-			if ((uintptr_t) va > act_va) {
-				user_mem_check_addr = (uintptr_t) va;
+		// El usuario puede acceder a esas direcciones si y solo si
+		// la dirección esta debajo de ULIM y si la table entry tiene
+		// los permisos. Table entry debe estar mapeada.
+		if (table_entry) {
+			bool is_below_ulim = act_va < ULIM;
+			bool has_permission_pte =
+			        ((*table_entry) & (perm | PTE_P)) ==
+			        (perm | PTE_P);
+			if (is_below_ulim && has_permission_pte) {
+				continue;
 			}
-			return -E_FAULT;
 		}
+		if (act_va == start_va) {
+			// Redondee para abajo, debo devolver el va de inicio
+			user_mem_check_addr = (uintptr_t) va;
+		} else if ((act_va + PGSIZE) == end_va_mem) {
+			// Redondee para arriba, debo devolver el va de fin
+			user_mem_check_addr = (uintptr_t)(va + len);
+		} else {
+			// Esta dento del rango, devuelvo pgsizeado
+			user_mem_check_addr = act_va;
+		}
+		return -E_FAULT;
 	}
 
 	return 0;

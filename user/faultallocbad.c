@@ -1,6 +1,9 @@
 // test user-level fault handler -- alloc pages to fix faults
 // doesn't work because we sys_cputs instead of cprintf (exercise: why?)
-
+// Porque cputs también hace una verificación de que el proceso, tenga
+// permisos para acceder a la región de memoria 0xDEADBEEF
+// y luego ejecuta cprintf. Como esto no sucede, se lanza la exepción
+// pagefault, que debería handlearla esta función.
 #include <inc/lib.h>
 
 void
