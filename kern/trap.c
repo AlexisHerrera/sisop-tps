@@ -399,6 +399,51 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 4: Your code here.
 
+	// Quiero cargar el utf, teniendo cuidado de que puedo tener
+	// un pagefault al estar handleando otro.
+	// Si existe un env_pgfault_upcall, entonces se lo va a handlear
+	// por _pgfault_upcall del usuario
+	if (curenv->env_pgfault_upcall != NULL) {
+		struct UTrapframe *u;
+		uintptr_t new_utf_addr;
+		// El stack se va acumulando de utfs en el rango [UXSTACKTOP-PGSIZE, UXSTACKTOP-1]
+		// Si es recursivo, el stack del trapframe tendrá una dirección dentro
+		// del rango mencionado, ya que sucedio mientras estaba handleando una exepción.
+		bool is_recursive = (tf->tf_esp >= UXSTACKTOP - PGSIZE) &&
+		                    (tf->tf_esp < UXSTACKTOP - PGSIZE);
+		if (is_recursive) {
+			// Recordar que utilizabamos una word para cargar el eip
+			// Entonces alojaremos el utf en el stack - 4 bytes y un
+			// espacio para el utf
+			new_utf_addr = tf->tf_esp - 4 - sizeof(struct UTrapframe);
+		} else {
+			// Si no es recursiva, simplemente la alojo en el UXSTACKTOP
+			new_utf_addr = UXSTACKTOP - sizeof(struct UTrapframe);
+		}
+		// Verifico si tengo permisos para guardar el utf ahi
+		user_mem_assert(curenv,
+		                (void *) new_utf_addr,
+		                sizeof(struct UTrapframe),
+		                PTE_P | PTE_W);
+
+		// Se "reserva la memoria" para un utf
+		u = (struct UTrapframe *) new_utf_addr;
+
+		// Se carga el Utrapframe
+		u->utf_fault_va = fault_va;
+		u->utf_err = tf->tf_err;
+		u->utf_regs = tf->tf_regs;
+		u->utf_eip = tf->tf_eip;
+		u->utf_eflags = tf->tf_eflags;
+		u->utf_esp = tf->tf_esp;
+		// Se carga donde está el pgfault_upcall, que debería estar en el curenv
+		tf->tf_eip = (uintptr_t) curenv->env_pgfault_upcall;
+		// Ahora el stack va a apuntar al fault_va del utf
+		tf->tf_esp = (uintptr_t) u;
+		// Notar que al volver al env, este tiene el eip
+		// apuntando al pgfault_upcall por el tf->tf_eip cargado.
+		env_run(curenv);
+	}
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 	        curenv->env_id,
