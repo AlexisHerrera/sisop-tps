@@ -39,6 +39,10 @@ set_pgfault_handler(void (*handler)(struct UTrapframe *utf))
 
 	// Save handler pointer for assembly to call.
 	_pgfault_handler = handler;
+	// Una vez reservada la memoria para el stack de excepciones
+	// Se sale del espacio de kernel hacia usuario
+	// Especificamente al _pgfault_upcall, quien va a llamar
+	// al handler y restaurar los registros del usuario.
 	if ((r=sys_env_set_pgfault_upcall(0, _pgfault_upcall)) < 0) {
 		panic("sys_env_set_pgfault_upcall: %e", r);
 	}
