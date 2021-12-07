@@ -246,3 +246,12 @@ Con este método el job 0 termina en la ut 18 y el job 1 en la ut 20.
 En la segunda versión, inicia de la misma manera el job 0, pero cuando termina su turno el job 1 toma y no suelta el CPU hasta terminar.
 Como se seteo el I/O en cero (nada realista), se puede ver como de manera continua se ejecuta el job 1 desde el 3 hasta el 13 cuando finaliza.
 En este caso el job 0 finaliza en la ut 20. Claramente, se pudo engañar al scheduler.
+
+Mejorar scheduling de JOS
+--------------
+Para mejorar el scheduling, podemos asignar prioridades a los procesos.
+
+Para ello asignamos un valor "nice" el cual tiene niveles desde -20 hasta el 19. Aquellos procesos que tengan un valor inferior serán los que mayor prioridad tengan y viceversa.
+
+También para brindar un manejo de prioridades vamos a tener una syscall que pueda modificar el valor de nice. Esto es así, para que el usuario no pueda modificar de manera explicita este valor y sacarle prioridad a otros procesos. De esta manera el kernel puede permitir que el proceso solo modifique SU prioridad o las de sus procesos hijos.
+
