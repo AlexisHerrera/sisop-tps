@@ -31,8 +31,13 @@ sched_yield(void)
 	// LAB 4: Your code here.
 	size_t index_start = 0;
 	size_t idx_last_env = 0;
+	size_t idx_env_run = -1;
+
 	if (curenv != NULL) {
 		idx_last_env = ENVX(curenv->env_id);
+		if (envs[idx_last_env].env_nice < 10) {
+			env_run(&envs[idx_last_env]);
+		}
 		index_start = idx_last_env + 1;
 	}
 	// Si es el primer proceso, se inicia desde 0 hasta NENV
@@ -50,6 +55,10 @@ sched_yield(void)
 		if (envs[i].env_status == ENV_RUNNABLE) {
 			env_run(&envs[i]);
 		}
+	}
+
+	if (idx_env_run != -1) {
+		env_run(&envs[idx_env_run]);
 	}
 
 	// Si no se encontró (y no es el primer proceso), se elige el

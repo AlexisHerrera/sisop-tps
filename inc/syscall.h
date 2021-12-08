@@ -16,7 +16,8 @@ enum {
 	SYS_yield,
 	SYS_ipc_try_send,
 	SYS_ipc_recv,
-	NSYSCALLS
+	NSYSCALLS,
+	SYS_env_set_nice
 };
 
 #endif /* !JOS_INC_SYSCALL_H */

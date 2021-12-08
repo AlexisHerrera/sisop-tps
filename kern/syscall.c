@@ -382,6 +382,28 @@ sys_ipc_recv(void *dstva)
 	return 0;
 }
 
+static int
+sys_env_set_nice(envid_t envid, int nice)
+{
+	// Hint: Use the 'envid2env' function from kern/env.c to translate an
+	// envid to a struct Env.
+	// You should set envid2env's third argument to 1, which will
+	// check whether the current environment has permission to set
+	// envid's status.
+
+	// LAB 4: Your code here.
+	int r;
+	struct Env *env;
+	if ((r = envid2env(envid, &env, 1)) < 0) {
+		return r;
+	}
+	if (nice < -20 || nice >= 20) {
+		return -E_INVAL;
+	}
+	env->env_nice = nice;
+	return 0;
+}
+
 // Dispatches to the correct kernel function, passing the arguments.
 int32_t
 syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, uint32_t a5)
@@ -408,6 +430,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_exofork();
 	case SYS_env_set_status:
 		return sys_env_set_status((envid_t) a1, a2);
+	case SYS_env_set_nice:
+		return sys_env_set_nice((envid_t) a1, a2);
 	case SYS_page_alloc:
 		return sys_page_alloc((envid_t) a1, (void *) a2, a3);
 	case SYS_page_map:

@@ -253,5 +253,44 @@ Para mejorar el scheduling, podemos asignar prioridades a los procesos.
 
 Para ello asignamos un valor "nice" el cual tiene niveles desde -20 hasta el 19. Aquellos procesos que tengan un valor inferior serán los que mayor prioridad tengan y viceversa.
 
-También para brindar un manejo de prioridades vamos a tener una syscall que pueda modificar el valor de nice. Esto es así, para que el usuario no pueda modificar de manera explicita este valor y sacarle prioridad a otros procesos. De esta manera el kernel puede permitir que el proceso solo modifique SU prioridad o las de sus procesos hijos.
+También para brindar un manejo de prioridades vamos a tener una syscall que pueda modificar el valor de nice. Esto es así, para que el usuario no pueda modificar de manera explicita este valor y sacarle prioridad a otros procesos. De esta manera el kernel puede permitir que el proceso solo modifique SU prioridad o las de sus procesos hijos. Podemos usar envid2env para verificar justamente esto.
 
+En sched_yield se utilizaba round-robin a secas, es decir, buscar el próximo proceso disponible a correr y ponerlo en marcha.
+Ahora, solo vamos a quedarnos con el de menor nice-level, a costa de recorrer todo el arreglo. 
+
+Para poder seguir corriendo las pruebas anteriores correctamente, se propuso lo siguiente:
+* Si el proceso actual tiene un nice inferior a 10, entonces sigue corriendo \*
+* En caso contrario, se ejecuta el round-robin normal
+
+Para probar el funcionamiento de esto, se creo 2 programas de usuario: ```envpriority``` y ```badenvpriority```.
+
+1. envpriority
+
+Inicialmente se setea el nice del proceso con -20. Luego se hace un fork y por defecto este tiene nice 10.
+Luego de 3 iteraciones, se intercambian los roles. Se puede ver como el proceso padre no vuelve a ejecutarse 
+hasta que termina su hijo.
+```
+...
+Hello, I am environment 00001000, cpu 0, nice -20
+[00001000] new env 00001001
+Back in environment 00001000, iteration 0, cpu 0, nice -20
+Back in environment 00001000, iteration 1, cpu 0, nice -20
+Back in environment 00001000, iteration 2, cpu 0, nice -20
+Se intercambian los roles de prioridad
+Back in environment 00001001, iteration 0, cpu 0, nice -20
+Back in environment 00001001, iteration 1, cpu 0, nice -20
+Back in environment 00001001, iteration 2, cpu 0, nice -20
+Back in environment 00001001, iteration 3, cpu 0, nice -20
+Back in environment 00001001, iteration 4, cpu 0, nice -20
+[00001001] exiting gracefully
+[00001001] free env 00001001
+Back in environment 00001000, iteration 3, cpu 0, nice 10
+Back in environment 00001000, iteration 4, cpu 0, nice 10
+[00001000] exiting gracefully
+[00001000] free env 00001000
+```
+2. badenvpriority
+
+En este programa simplemente se verifica que no se asignen prioridades que no están en el rango, y tampoco que pueda asignar prioridades a procesos que no son su hijo o si mismo. Por ejemplo los del rango 1000 a NENV. Si todo está bien, muestra el mensaje "All test passed".
+
+\* Nota: Se intentó utilizar un método para que siempre te devuelva el env con menor prioridad, sin embargo estos no pasan las pruebas por timeout o porque el makegrade mata a la prueba. Estas pruebas son ```spin0``` y ```spin()```

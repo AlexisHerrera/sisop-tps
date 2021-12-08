@@ -93,6 +93,13 @@ sys_env_set_status(envid_t envid, int status)
 	return syscall(SYS_env_set_status, 1, envid, status, 0, 0, 0);
 }
 
+// Challenge scheduling
+int
+sys_env_set_nice(envid_t envid, int nice)
+{
+	return syscall(SYS_env_set_nice, 1, envid, nice, 0, 0, 0);
+}
+
 int
 sys_env_set_pgfault_upcall(envid_t envid, void *upcall)
 {
