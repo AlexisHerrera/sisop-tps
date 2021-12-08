@@ -360,6 +360,32 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
+	struct Env *dst_env;
+	envid2env(envid, &dst_env, false);
+	if (!dst_env) {
+		return -E_BAD_ENV;
+	}
+	if (!dst_env->env_ipc_recving) {
+		return -E_IPC_NOT_RECV;
+	}
+	if (srcva < (void *) UTOP) {
+		if (PGOFF(srcva)) {
+			return -E_INVAL;
+		}
+		bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
+		bool has_accepted_perm = (perm & (~PTE_AVAIL)) != 0;
+		if (!has_basic_perm || !has_accepted_perm) {
+			return -E_INVAL;
+		}
+		pte_t *pte;
+		if (!page_lookup(curenv->env_pgdir, srcva, &pte)) {
+			return -E_INVAL;
+		}
+		if ((perm & PTE_W) && !(*pte & PTE_W)) {
+			return -E_INVAL;
+		}
+		// dst_env-> falta chequear el tamanio, si pasa este chequeo se hace le mapeo
+	}
 	panic("sys_ipc_try_send not implemented");
 }
 
@@ -378,7 +404,17 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+	if ((uintptr_t) dstva < UTOP) {
+		if (PGOFF(dstva)) {
+			return -E_INVAL;
+		}
+		curenv->env_ipc_dstva = dstva;
+	} else {
+		curenv->env_ipc_dstva = NULL;
+	}
+	curenv->env_ipc_recving = true;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	sched_yield();
 	return 0;
 }
 
@@ -417,6 +453,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_page_unmap((envid_t) a1, (void *) a2);
 	case SYS_env_set_pgfault_upcall:
 		return sys_env_set_pgfault_upcall((envid_t) a1, (void *) a2);
+	case SYS_ipc_recv:
+		return sys_ipc_recv((void *) a1);
 	default:
 		return -E_INVAL;
 	}
