@@ -256,9 +256,8 @@ Para ello asignamos un valor "nice" el cual tiene niveles desde -20 hasta el 19.
 También para brindar un manejo de prioridades vamos a tener una syscall que pueda modificar el valor de nice. Esto es así, para que el usuario no pueda modificar de manera explicita este valor y sacarle prioridad a otros procesos. De esta manera el kernel puede permitir que el proceso solo modifique SU prioridad o las de sus procesos hijos. Podemos usar envid2env para verificar justamente esto.
 
 En sched_yield se utilizaba round-robin a secas, es decir, buscar el próximo proceso disponible a correr y ponerlo en marcha.
-Ahora, solo vamos a quedarnos con el de menor nice-level, a costa de recorrer todo el arreglo. 
 
-Para poder seguir corriendo las pruebas anteriores correctamente, se propuso lo siguiente:
+Para poder seguir corriendo las pruebas anteriores correctamente, se propone lo siguiente:
 * Si el proceso actual tiene un nice inferior a 10, entonces sigue corriendo \*
 * En caso contrario, se ejecuta el round-robin normal
 

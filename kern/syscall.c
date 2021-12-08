@@ -381,7 +381,10 @@ sys_ipc_recv(void *dstva)
 	panic("sys_ipc_recv not implemented");
 	return 0;
 }
-
+// Cambia el nice del environment
+// Si no está en el rango [-20,19) devuelve -E_INVAL
+// Si no tiene los permisos, devuelve -E_INVAL
+// Si se pudo hacer el cambio de nice, devuelve 0
 static int
 sys_env_set_nice(envid_t envid, int nice)
 {
