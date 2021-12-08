@@ -40,18 +40,20 @@ sched_yield(void)
 	for (size_t i = index_start; i < NENV; i++) {
 		if (envs[i].env_status == ENV_RUNNABLE) {
 			env_run(&envs[i]);
+			return;
 		}
 	}
-
 	// Si se empezó desde el idx_last_env + 1, faltan ver
 	// los envs desde 0 hasta idx_last_env
-	// Si es el primer proceso, esto no hace ni 1 iteracion
-	for (size_t i = 0; i < idx_last_env; i++) {
-		if (envs[i].env_status == ENV_RUNNABLE) {
-			env_run(&envs[i]);
+	// Si no me equivoco puedo eliminar el if...
+	if (curenv != NULL) {
+		for (size_t i = 0; i < idx_last_env; i++) {
+			if (envs[i].env_status == ENV_RUNNABLE) {
+				env_run(&envs[i]);
+				return;
+			}
 		}
 	}
-
 	// Si no se encontró (y no es el primer proceso), se elige el
 	// último proceso corriendo
 	if (curenv != NULL && envs[idx_last_env].env_status == ENV_RUNNING) {
