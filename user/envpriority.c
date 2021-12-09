@@ -27,9 +27,10 @@ umain(int argc, char **argv)
 		}
 		return;
 	}
-	// Esto se debería ejecutar de manera ininterrumpida
+
 	for (i = 0; i < 5; i++) {
 		if (i == 3) {
+			// Se swapean las prioridades
 			r = sys_env_set_nice(thisenv->env_id, 10);
 			if (r < 0) {
 				panic("sys_env_set_nice: %e", r);

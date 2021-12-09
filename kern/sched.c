@@ -31,40 +31,42 @@ sched_yield(void)
 	// LAB 4: Your code here.
 	size_t index_start = 0;
 	size_t idx_last_env = 0;
-	size_t idx_env_run = -1;
-
+	size_t idx_run = -1;
 	if (curenv != NULL) {
 		idx_last_env = ENVX(curenv->env_id);
-		if (envs[idx_last_env].env_nice < 10) {
-			env_run(&envs[idx_last_env]);
-		}
 		index_start = idx_last_env + 1;
+		if (envs[idx_last_env].env_status == ENV_RUNNING) {
+			idx_run = idx_last_env;
+		}
 	}
 	// Si es el primer proceso, se inicia desde 0 hasta NENV
 	// Sino va desde idx_last_env + 1
 	for (size_t i = index_start; i < NENV; i++) {
 		if (envs[i].env_status == ENV_RUNNABLE) {
-			env_run(&envs[i]);
+			if (idx_run == -1 ||
+			    envs[i].env_nice < envs[idx_run].env_nice) {
+				idx_run = i;
+			}
 		}
 	}
-
 	// Si se empezó desde el idx_last_env + 1, faltan ver
 	// los envs desde 0 hasta idx_last_env
-	// Si es el primer proceso, esto no hace ni 1 iteracion
+
 	for (size_t i = 0; i < idx_last_env; i++) {
 		if (envs[i].env_status == ENV_RUNNABLE) {
-			env_run(&envs[i]);
+			if (idx_run == -1 ||
+			    envs[i].env_nice < envs[idx_run].env_nice) {
+				idx_run = i;
+			}
 		}
 	}
 
-	if (idx_env_run != -1) {
-		env_run(&envs[idx_env_run]);
-	}
-
-	// Si no se encontró (y no es el primer proceso), se elige el
-	// último proceso corriendo
-	if (curenv != NULL && envs[idx_last_env].env_status == ENV_RUNNING) {
-		env_run(&envs[idx_last_env]);
+	// Si se obtuvo un env que se pueda correr,
+	// utilizamos el que menor nice tenga.
+	// Si el env que llamo a sched_yield sigue corriendo
+	// y no se encontró otro con menor nice, entonces vuelve a correr.
+	if (idx_run != -1) {
+		env_run(&envs[idx_run]);
 	}
 	// sched_halt never returns
 	sched_halt();
