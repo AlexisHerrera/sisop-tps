@@ -74,7 +74,7 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 			notSent = sys_ipc_try_send(to_env, val, pg, perm);
 		} else {
 			notSent = sys_ipc_try_send(
-			        to_env, val, (void *) KERNBASE, NULL);
+			        to_env, val, (void *) KERNBASE, (int) NULL);
 		}
 		if (notSent < 0) {
 			if (notSent != -E_IPC_NOT_RECV) {
