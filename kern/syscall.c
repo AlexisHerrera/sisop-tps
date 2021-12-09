@@ -368,7 +368,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	if (!dst_env->env_ipc_recving) {
 		return -E_IPC_NOT_RECV;
 	}
-	if (srcva < (void *) UTOP) {
+	if (srcva < (void *) UTOP && dst_env->env_ipc_dstva != NULL) {
 		if (PGOFF(srcva)) {
 			return -E_INVAL;
 		}
@@ -377,16 +377,25 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		if (!has_basic_perm || !has_accepted_perm) {
 			return -E_INVAL;
 		}
+
+		struct PageInfo *page;
 		pte_t *pte;
-		if (!page_lookup(curenv->env_pgdir, srcva, &pte)) {
+
+		if ((page = page_lookup(curenv->env_pgdir, srcva, &pte)) != NULL) {
 			return -E_INVAL;
 		}
+
 		if ((perm & PTE_W) && !(*pte & PTE_W)) {
 			return -E_INVAL;
 		}
-		// dst_env-> falta chequear el tamanio, si pasa este chequeo se hace le mapeo
+
+		if ((page_insert(dst_env->env_pgdir,
+		                 page,
+		                 dst_env->env_ipc_dstva,
+		                 perm)) < 0) {
+			return -E_NO_MEM;
+		}
 	}
-	panic("sys_ipc_try_send not implemented");
 }
 
 // Block until a value is ready.  Record that you want to receive
