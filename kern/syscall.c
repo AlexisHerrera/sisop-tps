@@ -414,6 +414,8 @@ sys_ipc_recv(void *dstva)
 	}
 	curenv->env_ipc_recving = true;
 	curenv->env_status = ENV_NOT_RUNNABLE;
+	// Para devolver 0 en la syscall (igual a exofork)
+	curenv->env_tf.tf_regs.reg_eax = 0;
 	sched_yield();
 	return 0;
 }
