@@ -368,6 +368,8 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	if (!dst_env->env_ipc_recving) {
 		return -E_IPC_NOT_RECV;
 	}
+	bool page_transfered = false;
+	// Si pide mapearlo
 	if (srcva < (void *) UTOP && dst_env->env_ipc_dstva != NULL) {
 		if (PGOFF(srcva)) {
 			return -E_INVAL;
@@ -377,25 +379,36 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		if (!has_basic_perm || !has_accepted_perm) {
 			return -E_INVAL;
 		}
-
+		
 		struct PageInfo *page;
 		pte_t *pte;
-
-		if ((page = page_lookup(curenv->env_pgdir, srcva, &pte)) != NULL) {
+		
+		if ((page = page_lookup(curenv->env_pgdir, srcva, &pte)) == NULL) {
 			return -E_INVAL;
 		}
-
+		
 		if ((perm & PTE_W) && !(*pte & PTE_W)) {
 			return -E_INVAL;
 		}
-
-		if ((page_insert(dst_env->env_pgdir,
-		                 page,
-		                 dst_env->env_ipc_dstva,
-		                 perm)) < 0) {
+		
+		if ((page_insert(dst_env->env_pgdir, page, dst_env->env_ipc_dstva, perm)) < 0) {
 			return -E_NO_MEM;
 		}
+		page_transfered = true;
 	}
+	// env_ipc_recving is set to 0 to block future sends;
+	dst_env->env_ipc_recving = 0;
+	
+	// env_ipc_from is set to the sending envid;
+	dst_env->env_ipc_from = curenv->env_id;
+	
+	// env_ipc_value is set to the 'value' parameter;
+	dst_env->env_ipc_value = value;
+
+	// env_ipc_perm is set to 'perm' if a page was transferred, 0 otherwise.
+	dst_env->env_ipc_perm = page_transfered ? perm : 0;
+	dst_env->env_status = ENV_RUNNABLE;
+	return 0;
 }
 
 // Block until a value is ready.  Record that you want to receive
