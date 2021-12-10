@@ -25,6 +25,19 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+	pte_t pte = uvpt[PGNUM(addr)];
+	// La dirección está mapeada si y solo sí el bit FEC_PR está a 1
+	if (!(err & FEC_PR)) {
+		panic("Pagefault por una dirección no mapeada");
+	}
+	// El error ocurrió por una lectura si el bit FEC_WR está a 0
+	if (!(err & FEC_WR)) {
+		panic("Pagefault por una lectura");
+	}
+	// Para verificar PTE_COW se debe usar uvpt.
+	if (!(pte & PTE_COW)) {
+		panic("Pagefault por una página no marcada con COW");
+	}
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -33,8 +46,19 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 
 	// LAB 4: Your code here.
-
-	panic("pgfault not implemented");
+	// Reservo la página en PFTEMP
+	if ((r = sys_page_alloc(0, PFTEMP, PTE_U | PTE_P | PTE_W)) < 0) {
+		panic("sys_page_alloc: %e", r);
+	}
+	// Copio lo que tengo en addr en PFTEMP
+	memmove(PFTEMP, addr, PGSIZE);
+	// Mapeo lo que tengo en PFTEMP a addr
+	if ((r = sys_page_map(0, PFTEMP, 0, addr, PTE_U | PTE_P | PTE_W)) < 0) {
+		panic("sys_page_map: %e", r);
+	}
+	if ((r = sys_page_unmap(0, PFTEMP)) < 0) {
+		panic("sys_page_unmap: %e", r);
+	}
 }
 
 //
@@ -54,7 +78,22 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
-	panic("duppage not implemented");
+	uintptr_t addr = pn * PGSIZE;
+	pte_t pte = uvpt[pn];
+	// Permisos del padre menos PTE_W
+	int par_perm = pte & 0xFFF;
+	int perm = par_perm & (~PTE_W);
+
+	if ((par_perm & PTE_W) || (par_perm & PTE_COW)) {
+		perm |= PTE_COW;
+		if ((r = sys_page_map(0, (void *) addr, 0, (void *) addr, perm)) <
+		    0) {
+			panic("sys_page_map: %e", r);
+		}
+	}
+	if ((r = sys_page_map(0, (void *) addr, envid, (void *) addr, perm)) < 0) {
+		panic("sys_page_map: %e", r);
+	}
 	return 0;
 }
 
@@ -192,16 +231,17 @@ fork(void)
 		// La pde está mapeada. Tengo que revisar toda la pte
 		// para obtener las direcciones de esta region.
 		for (pteno = 0; pteno < NPTENTRIES; pteno++) {
-			addr = PGADDR(pdeno, pteno, 0);
+			addr = (uintptr_t) PGADDR(pdeno, pteno, 0);
 			if (addr == (UXSTACKTOP - PGSIZE)) {
 				continue;
 			}
 			// Verifico que la pte este mapeada
 			if (!(uvpt[PGNUM(addr)] & PTE_P)) {
-				// En vez de indicarle la dirección a copiar
-				// le doy el número de la página virtual
-				duppage(envid, PGNUM(addr));
+				continue;
 			}
+			// En vez de indicarle la dirección a copiar
+			// le doy el número de la página virtual
+			duppage(envid, PGNUM(addr));
 		}
 	}
 
