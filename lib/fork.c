@@ -106,6 +106,8 @@ fork_v0(void)
 		pde_t pde = uvpd[PDX(addr)];
 		// Primero debe estar marcada como ocupada la pde
 		if (pde & PTE_P) {
+			// Recordar que uvpt tiene todos los ptes (1024*1024)
+			// y para acceder uso el PGNUM del address (pdx+ptx)
 			pte_t pte = uvpt[PGNUM(addr)];
 
 			// Si entro acá, entonces la página está mapeada
@@ -152,6 +154,7 @@ fork(void)
 	set_pgfault_handler(pgfault);
 	envid_t envid;
 	uintptr_t addr;
+	uint32_t pdeno, pteno;
 	int r;
 
 	envid = sys_exofork();
@@ -170,20 +173,34 @@ fork(void)
 		panic("fork: %e", envid);
 	}
 	// Instalo el manejador de exepciones en el hijo
+	// El padre tiene el manejador por llamar a set_pgfault_handler
 	r = sys_env_set_pgfault_upcall(envid, thisenv->env_pgfault_upcall);
 	if (r < 0) {
 		panic("fork: %e", envid);
 	}
-	// Similar a fork_v0
-	for (addr = 0; addr < UTOP; addr += PGSIZE) {
-		if (addr == (uintptr_t)(UXSTACKTOP - PGSIZE)) {
+	// Para poder descartar una pgdir que no tiene nada mapeado
+	// (o sea que (PDE & PTE_P) == 0), no podemos iterar sobre las direcciones
+	// porque a priori no puedo saber si esa dirección pertenecía
+	// a una pde que ya había visto que no estaba mapeada.
+	// Entonces, lo más conveniente es iterar sobre el pgdir en la
+	// region que mapea desde 0 a UTOP. Similar a env_free()
+	for (pdeno = 0; pdeno < PDX(UTOP); pdeno++) {
+		// only look at mapped page tables
+		if (!(uvpd[pdeno] & PTE_P)) {
 			continue;
 		}
-		pde_t pde = uvpd[PDX(addr)];
-		if (pde & PTE_P) {
-			pte_t pte = uvpt[PGNUM(addr)];
-			if (pte & PTE_P) {
-				duppage(envid, (void *) addr);
+		// La pde está mapeada. Tengo que revisar toda la pte
+		// para obtener las direcciones de esta region.
+		for (pteno = 0; pteno < NPTENTRIES; pteno++) {
+			addr = PGADDR(pdeno, pteno, 0);
+			if (addr == (UXSTACKTOP - PGSIZE)) {
+				continue;
+			}
+			// Verifico que la pte este mapeada
+			if (!(uvpt[PGNUM(addr)] & PTE_P)) {
+				// En vez de indicarle la dirección a copiar
+				// le doy el número de la página virtual
+				duppage(envid, PGNUM(addr));
 			}
 		}
 	}
