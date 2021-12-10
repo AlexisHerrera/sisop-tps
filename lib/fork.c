@@ -149,7 +149,50 @@ envid_t
 fork(void)
 {
 	// LAB 4: Your code here.
-	return fork_v0();
+	set_pgfault_handler(pgfault);
+	envid_t envid;
+	uintptr_t addr;
+	int r;
+
+	envid = sys_exofork();
+	if (envid < 0)
+		panic("fork: %e", envid);
+	// Hijo
+	if (envid == 0) {
+		thisenv = &envs[ENVX(sys_getenvid())];
+		return 0;
+	}
+	// Padre
+	r = sys_page_alloc(envid,
+	                   (void *) (UXSTACKTOP - PGSIZE),
+	                   PTE_U | PTE_P | PTE_W);
+	if (r < 0) {
+		panic("fork: %e", envid);
+	}
+	// Instalo el manejador de exepciones en el hijo
+	r = sys_env_set_pgfault_upcall(envid, thisenv->env_pgfault_upcall);
+	if (r < 0) {
+		panic("fork: %e", envid);
+	}
+	// Similar a fork_v0
+	for (addr = 0; addr < UTOP; addr += PGSIZE) {
+		if (addr == (uintptr_t)(UXSTACKTOP - PGSIZE)) {
+			continue;
+		}
+		pde_t pde = uvpd[PDX(addr)];
+		if (pde & PTE_P) {
+			pte_t pte = uvpt[PGNUM(addr)];
+			if (pte & PTE_P) {
+				duppage(envid, (void *) addr);
+			}
+		}
+	}
+
+	if ((r = sys_env_set_status(envid, ENV_RUNNABLE)) < 0) {
+		panic("sys_env_set_status: %e", r);
+	}
+
+	return envid;
 }
 
 // Challenge!
