@@ -379,29 +379,32 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		if (!has_basic_perm || !has_accepted_perm) {
 			return -E_INVAL;
 		}
-		
+
 		struct PageInfo *page;
 		pte_t *pte;
-		
+
 		if ((page = page_lookup(curenv->env_pgdir, srcva, &pte)) == NULL) {
 			return -E_INVAL;
 		}
-		
+
 		if ((perm & PTE_W) && !(*pte & PTE_W)) {
 			return -E_INVAL;
 		}
-		
-		if ((page_insert(dst_env->env_pgdir, page, dst_env->env_ipc_dstva, perm)) < 0) {
+
+		if ((page_insert(dst_env->env_pgdir,
+		                 page,
+		                 dst_env->env_ipc_dstva,
+		                 perm)) < 0) {
 			return -E_NO_MEM;
 		}
 		page_transfered = true;
 	}
 	// env_ipc_recving is set to 0 to block future sends;
 	dst_env->env_ipc_recving = 0;
-	
+
 	// env_ipc_from is set to the sending envid;
 	dst_env->env_ipc_from = curenv->env_id;
-	
+
 	// env_ipc_value is set to the 'value' parameter;
 	dst_env->env_ipc_value = value;
 
