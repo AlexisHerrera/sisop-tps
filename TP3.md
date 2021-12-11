@@ -144,7 +144,90 @@ Si no hubiera un error, en src se encontraria el ID del environment que envia el
 sys_ipc_send
 --------------
 
+Para poder hacer al try_send un send bloqueante, necesitamos hacer varios chequeos extra en ambas funciones (send y recv). En el caso del recv necesitamos verificar que todavia no haya un environment intentando enviarnos cosas antes de lockearnos. Por lo tanto necesitamos una manera de chequear que el otro proceso este enviando cosas. Para esto creamos el env_ipc_senging, que es un bool que se pone en true si el proceso desea enviar, en false si no esta enviando. Si es false, el recv continua de la manera programada en el tp3 y se lockea. Si es true significa que hay un proceso que esta deseando enviarnos informacion, entonces buscamos ese environment (el envid esta guardado en el env_ipc_from), lo desloqueamos y nos lockeamos nosotros de la misma manera de siempre. Al desbloquear al proceso enviante, el flujo del programa continua con normalidad, como si el send hubiera llegado despues del recv.
+En el send tenemos que hacer el mismo chequeo, si el proceso que desea recibir esta lockeado se ejecuta de la manera ya programada. Pero si el proceso receptor no se encuentra esperando, se debe setear en su ambiente que un proceso se esta intentando comunicar, para eso deja su envid en el env_ipc_from del env receptor y se pone el sending propio en true. Cuando se haga esto hay que chequear que no haya otro proceso intentando enviarle informacion al mismo proceso, ya que sino ese quedaria lockeado para siempre. 
+Esta configuracion solo funciona para establecer una comunicacion entre 2 procesos solamente, si se quisiera tener varios procesos enviantes esperando para 1 solo recibidor habria que buscar otras implementaciones.
 
+```
+static int
+sys_ipc_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
+{
+	// LAB 4: Your code here.
+	int r;
+	struct Env *dst_env;
+	envid2env(envid, &dst_env, false);
+	if (!dst_env) {
+		return -E_BAD_ENV;
+	}
+	if (!dst_env->env_ipc_recving) {
+		if (!dst_env->env_ipc_from) {
+            return -E_RECV_ENV; // habria que definir este error tambien
+        }
+        dst_env->env_ipc_from = curenv->env_id;
+        curenv->env_ipc_sengind = true;
+        curenv->env_status = ENV_NOT_RUNNABLE;
+        sched_yield();
+	}
+	bool page_transfered = false;
+	if (srcva < (void *) UTOP && dst_env->env_ipc_dstva < (void *) UTOP) {
+		if ((r = page_map_pgdirs(curenv->env_pgdir,
+		                         srcva,
+		                         dst_env->env_pgdir,
+		                         dst_env->env_ipc_dstva,
+		                         perm)) < 0) {
+			return r;
+		}
+		page_transfered = true;
+	}
+	// env_ipc_recving is set to 0 to block future sends;
+	dst_env->env_ipc_recving = 0;
+
+	// env_ipc_from is set to the sending envid;
+	dst_env->env_ipc_from = curenv->env_id;
+
+	// env_ipc_value is set to the 'value' parameter;
+	dst_env->env_ipc_value = value;
+
+	// env_ipc_perm is set to 'perm' if a page was transferred, 0 otherwise.
+	dst_env->env_ipc_perm = page_transfered ? perm : 0;
+	dst_env->env_status = ENV_RUNNABLE;
+
+    currenv->env_ipc_sengind = false;
+	return 0;
+}
+
+
+static int
+sys_ipc_recv(void *dstva)
+{
+	// LAB 4: Your code here.
+	if ((uintptr_t) dstva < UTOP) {
+		if (PGOFF(dstva)) {
+			return -E_INVAL;
+		}
+		curenv->env_ipc_dstva = dstva;
+	} else {
+		curenv->env_ipc_dstva = (void *) KERNBASE;
+	}
+    if (!curenv->env_ipc_from) {
+        struct Env *dst_env;
+        envid2env(envid, &dst_env, false);
+        if (!dst_env) {
+            return -E_BAD_ENV;
+        }
+        if (dst_env->env_ipc_sending) {
+            dst_env->env_status = ENV_RUNNABLE;            
+        }
+    }
+	curenv->env_ipc_recving = true;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	// Para devolver 0 en la syscall (igual a exofork)
+	curenv->env_tf.tf_regs.reg_eax = 0;
+	sched_yield();
+	return 0;
+}
+```
+Ademas habria que sacar el loop del ipc_send y cambiar la syscall por send, esa ya quedaria lockeada
 
 
 Cambios del TP2 hechos en el TP3
