@@ -17,17 +17,15 @@
 bool
 has_permissions(int perm)
 {
-	// Solo los flags que lee el kernel (por ej, ignora a PTE_COW)
-	// perm &= 0x7FF;
 	// Debe tener PTE_U y PTE_P
 	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
-	// Debe tener solo los bits PTE_SYSCALL
-	// bool has_accepted_perm = (perm & (~PTE_SYSCALL)) != 0;
-	// if (!has_accepted_perm) {
-	// 	cprintf("perm: %08x\n, ", perm);
-	// }
-	return has_basic_perm;
-	// return has_accepted_perm && has_basic_perm;
+	// bool has_accepted_perm = (perm & (~PTE_SYSCALL)) == 0;
+	// Por alguna razón, esa página tiene permisos PTE_A|PTE_D
+	// Pero no se pudo trackear en donde se setearon. Ignoro
+	// los bits de 0x0F0. 
+	bool has_accepted_perm = (perm & 0x108) == 0;
+	// return has_basic_perm;
+	return has_accepted_perm && has_basic_perm;
 }
 
 // Print a string to the system console.
@@ -270,12 +268,12 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 	if ((uintptr_t) dstva >= UTOP || PGOFF(dstva)) {
 		return -E_INVAL;
 	}
-
 	// Permisos
 	bool has_perm = has_permissions(perm);
 	if (!has_perm) {
 		return -E_INVAL;
 	}
+	// cprintf("Cumple los permisos\n");
 	// Primero se obtiene la pagina source
 	// Utilizamos el pte para verificar permisos
 	pte_t *pte;
@@ -296,7 +294,7 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 		return r;  // -E_NO_MEM
 	}
 	// cprintf("envid_src:%d, envid_dst:%d, va_src:%08x, va_dst:%08x,
-	// perm:%d\n",srcenvid,dstenvid, srcva, dstva,perm);
+	// perm:%08x\n",srcenvid,dstenvid, srcva, dstva,perm);
 	return 0;
 }
 
