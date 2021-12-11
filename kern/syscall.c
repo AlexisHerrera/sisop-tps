@@ -28,6 +28,45 @@ has_permissions(int perm)
 	return has_accepted_perm && has_basic_perm;
 }
 
+static int
+page_map_pgdirs(pde_t *src_pgdir, void *srcva, pde_t *dst_pgdir, void *dstva, int perm)
+{
+	int r;
+	pte_t *pte;
+	// Alineación de las va de src y dst
+	if ((uintptr_t) srcva >= UTOP || PGOFF(srcva)) {
+		return -E_INVAL;
+	}
+	if ((uintptr_t) dstva >= UTOP || PGOFF(dstva)) {
+		return -E_INVAL;
+	}
+	// Permisos
+	bool has_perm = has_permissions(perm);
+	if (!has_perm) {
+		return -E_INVAL;
+	}
+	struct PageInfo *page = page_lookup(src_pgdir, srcva, &pte);
+	if (page == NULL) {
+		return -E_INVAL;
+	}
+
+	// No debe pasar que perm tiene permisos de escritura
+	// y la pte no tenga esos permisos.
+	if ((perm & PTE_W) && !(*pte & PTE_W)) {
+		return -E_INVAL;
+	}
+
+	// Luego se inserta la pagina en la va de destino
+	r = page_insert(dst_pgdir, page, dstva, perm);
+	if (r < 0) {
+		return r;  // -E_NO_MEM
+	}
+	// cprintf("envid_src:%d, envid_dst:%d, va_src:%08x, va_dst:%08x,
+	// perm:%08x\n",srcenvid,dstenvid, srcva, dstva,perm);
+	return 0;
+}
+
+
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
 // Destroys the environment on memory errors.
@@ -261,41 +300,11 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 		return r;  // -E_BAD_ENV
 	}
 
-	// Alineación de las va de src y dst
-	if ((uintptr_t) srcva >= UTOP || PGOFF(srcva)) {
-		return -E_INVAL;
-	}
-	if ((uintptr_t) dstva >= UTOP || PGOFF(dstva)) {
-		return -E_INVAL;
-	}
-	// Permisos
-	bool has_perm = has_permissions(perm);
-	if (!has_perm) {
-		return -E_INVAL;
-	}
-	// cprintf("Cumple los permisos\n");
-	// Primero se obtiene la pagina source
-	// Utilizamos el pte para verificar permisos
-	pte_t *pte;
-	struct PageInfo *page = page_lookup(src_env->env_pgdir, srcva, &pte);
-	if (page == NULL) {
-		return -E_INVAL;
-	}
-
-	// No debe pasar que perm tiene permisos de escritura
-	// y la pte no tenga esos permisos.
-	if ((perm & PTE_W) && !(*pte & PTE_W)) {
-		return -E_INVAL;
-	}
-
-	// Luego se inserta la pagina en la va de destino
-	r = page_insert(dst_env->env_pgdir, page, dstva, perm);
-	if (r < 0) {
-		return r;  // -E_NO_MEM
-	}
+	return page_map_pgdirs(
+	        src_env->env_pgdir, srcva, dst_env->env_pgdir, dstva, perm);
 	// cprintf("envid_src:%d, envid_dst:%d, va_src:%08x, va_dst:%08x,
 	// perm:%08x\n",srcenvid,dstenvid, srcva, dstva,perm);
-	return 0;
+	// return 0;
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -375,6 +384,7 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
+	int r;
 	struct Env *dst_env;
 	envid2env(envid, &dst_env, false);
 	if (!dst_env) {
@@ -385,29 +395,12 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	}
 	bool page_transfered = false;
 	if (srcva < (void *) UTOP && dst_env->env_ipc_dstva < (void *) UTOP) {
-		if (PGOFF(srcva)) {
-			return -E_INVAL;
-		}
-		bool has_perm = has_permissions(perm);
-		if (!has_perm) {
-			return -E_INVAL;
-		}
-		struct PageInfo *page;
-		pte_t *pte;
-
-		if ((page = page_lookup(curenv->env_pgdir, srcva, &pte)) ==
-		NULL) { 	return -E_INVAL;
-		}
-
-		if ((perm & PTE_W) && !(*pte & PTE_W)) {
-			return -E_INVAL;
-		}
-
-		if ((page_insert(dst_env->env_pgdir,
-		                 page,
-		                 dst_env->env_ipc_dstva,
-		                 perm)) < 0) {
-			return -E_NO_MEM;
+		if ((r = page_map_pgdirs(curenv->env_pgdir,
+		                         srcva,
+		                         dst_env->env_pgdir,
+		                         dst_env->env_ipc_dstva,
+		                         perm)) < 0) {
+			return r;
 		}
 		page_transfered = true;
 	}
