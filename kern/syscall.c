@@ -12,6 +12,24 @@
 #include <kern/console.h>
 #include <kern/sched.h>
 
+// perm -- PTE_U | PTE_P must be set, PTE_AVAIL | PTE_W may or may not be set,
+//         but no other bits may be set.  See PTE_SYSCALL in inc/mmu.h.
+bool
+has_permissions(int perm)
+{
+	// Solo los flags que lee el kernel (por ej, ignora a PTE_COW)
+	// perm &= 0x7FF;
+	// Debe tener PTE_U y PTE_P
+	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
+	// Debe tener solo los bits PTE_SYSCALL
+	// bool has_accepted_perm = (perm & (~PTE_SYSCALL)) != 0;
+	// if (!has_accepted_perm) {
+	// 	cprintf("perm: %08x\n, ", perm);
+	// }
+	return has_basic_perm;
+	// return has_accepted_perm && has_basic_perm;
+}
+
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
 // Destroys the environment on memory errors.
@@ -188,12 +206,11 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	if ((uintptr_t) va >= UTOP || PGOFF(va)) {
 		return -E_INVAL;
 	}
-	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
-	bool has_accepted_perm = (perm & (~PTE_AVAIL)) != 0;
-	if (!has_basic_perm || !has_accepted_perm) {
+
+	bool has_perm = has_permissions(perm);
+	if (!has_perm) {
 		return -E_INVAL;
 	}
-
 	struct PageInfo *page = page_alloc(ALLOC_ZERO);
 	if (page == NULL) {
 		return -E_NO_MEM;
@@ -255,9 +272,8 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 	}
 
 	// Permisos
-	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
-	bool has_accepted_perm = (perm & (~PTE_AVAIL)) != 0;
-	if (!has_basic_perm || !has_accepted_perm) {
+	bool has_perm = has_permissions(perm);
+	if (!has_perm) {
 		return -E_INVAL;
 	}
 	// Primero se obtiene la pagina source
@@ -375,12 +391,10 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		if (PGOFF(srcva)) {
 			return -E_INVAL;
 		}
-		bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
-		bool has_accepted_perm = (perm & (~PTE_AVAIL)) != 0;
-		if (!has_basic_perm || !has_accepted_perm) {
+		bool has_perm = has_permissions(perm);
+		if (!has_perm) {
 			return -E_INVAL;
 		}
-
 		struct PageInfo *page;
 		pte_t *pte;
 
