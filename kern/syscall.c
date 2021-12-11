@@ -279,7 +279,8 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 	if (r < 0) {
 		return r;  // -E_NO_MEM
 	}
-
+	// cprintf("envid_src:%d, envid_dst:%d, va_src:%08x, va_dst:%08x,
+	// perm:%d\n",srcenvid,dstenvid, srcva, dstva,perm);
 	return 0;
 }
 

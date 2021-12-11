@@ -17,7 +17,6 @@ pgfault(struct UTrapframe *utf)
 	void *addr = (void *) utf->utf_fault_va;
 	uint32_t err = utf->utf_err;
 	int r;
-
 	// Check that the faulting access was (1) a write, and (2) to a
 	// copy-on-write page.  If not, panic.
 	// Hint:
@@ -25,6 +24,8 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+	// La dirección donde sucede el pagefault no está alineada.
+	addr = ROUNDDOWN(addr, PGSIZE);
 	pte_t pte = uvpt[PGNUM(addr)];
 	// La dirección está mapeada si y solo sí el bit FEC_PR está a 1
 	if (!(err & FEC_PR)) {
@@ -56,6 +57,7 @@ pgfault(struct UTrapframe *utf)
 	if ((r = sys_page_map(0, PFTEMP, 0, addr, PTE_U | PTE_P | PTE_W)) < 0) {
 		panic("sys_page_map: %e", r);
 	}
+	// Borro la página temporal
 	if ((r = sys_page_unmap(0, PFTEMP)) < 0) {
 		panic("sys_page_unmap: %e", r);
 	}
