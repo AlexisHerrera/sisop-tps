@@ -141,8 +141,11 @@ En este caso si hubiera un error, el valor en src seria de 0 y r seria el codigo
 
 Si no hubiera un error, en src se encontraria el ID del environment que envia el mensaje, y en r el valor que envio.
 
-sys_ipc_try_send
+sys_ipc_send
 --------------
+
+
+
 
 Cambios del TP2 hechos en el TP3
 --------------

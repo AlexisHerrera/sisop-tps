@@ -42,17 +42,6 @@ ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 	if (perm_store) {
 		*perm_store = thisenv->env_ipc_perm;
 	}
-	// Tiene sentido que el mapeo lo haga el send ya
-	// que solo se debería mapear SI se realiza el intercambio
-	// es decir cuando recv está "escuchando" y send haya enviado.
-
-	// if (!thisenv->env_ipc_dstva) {
-	// 	sys_page_map(thisenv->env_ipc_from,
-	// 	             (void *) thisenv->env_ipc_value,
-	// 	             thisenv->env_id,
-	// 	             thisenv->env_ipc_dstva,
-	// 	             thisenv->env_ipc_perm);
-	// }
 	return thisenv->env_ipc_value;
 }
 

@@ -386,31 +386,10 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 		return -E_IPC_NOT_RECV;
 	}
 	bool page_transfered = false;
-	// Si pide mapearlo
-	if (srcva < (void *) UTOP && dst_env->env_ipc_dstva != NULL) {
-		if (PGOFF(srcva)) {
-			return -E_INVAL;
-		}
-		bool has_perm = has_permissions(perm);
-		if (!has_perm) {
-			return -E_INVAL;
-		}
-		struct PageInfo *page;
-		pte_t *pte;
-
-		if ((page = page_lookup(curenv->env_pgdir, srcva, &pte)) == NULL) {
-			return -E_INVAL;
-		}
-
-		if ((perm & PTE_W) && !(*pte & PTE_W)) {
-			return -E_INVAL;
-		}
-
-		if ((page_insert(dst_env->env_pgdir,
-		                 page,
-		                 dst_env->env_ipc_dstva,
-		                 perm)) < 0) {
-			return -E_NO_MEM;
+	if (srcva < (void *) UTOP && dst_env->env_ipc_dstva < (void *) UTOP) {
+		int err = sys_page_map(curenv->env_id, srcva, envid, dst_env->env_ipc_dstva, perm);
+		if (err < 0) {
+			return err;
 		}
 		page_transfered = true;
 	}
@@ -450,7 +429,7 @@ sys_ipc_recv(void *dstva)
 		}
 		curenv->env_ipc_dstva = dstva;
 	} else {
-		curenv->env_ipc_dstva = NULL;
+		curenv->env_ipc_dstva = KERNBASE;
 	}
 	curenv->env_ipc_recving = true;
 	curenv->env_status = ENV_NOT_RUNNABLE;
