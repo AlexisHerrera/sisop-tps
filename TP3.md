@@ -130,3 +130,25 @@ void duppage(envid_t dstenv, void *addr, bool readonly) {
     }
 }
 ```
+
+ipc_recv
+--------------
+Para distinguir entre un error o un valor negativo se puede chequear el estado del src o del perm_store.
+
+En el caso que haya fallado la syscall esos valores se encontraran en 0.
+
+En este caso si hubiera un error, el valor en src seria de 0 y r seria el codigo de error.
+
+Si no hubiera un error, en src se encontraria el ID del environment que envia el mensaje, y en r el valor que envio.
+
+sys_ipc_send
+--------------
+
+
+
+
+Cambios del TP2 hechos en el TP3
+--------------
+En kern/pmap.c user_mem_check se asumía que la página existía, lo que al verificar si tenía permisos generaba un page-fault. Esto se descubrió con el test
+faultallocbad.
+También se verifica un caso borde al redondear la memoria hacia arriba (solo se estaba verificando hacia abajo).

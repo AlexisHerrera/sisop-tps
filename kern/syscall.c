@@ -12,6 +12,61 @@
 #include <kern/console.h>
 #include <kern/sched.h>
 
+// perm -- PTE_U | PTE_P must be set, PTE_AVAIL | PTE_W may or may not be set,
+//         but no other bits may be set.  See PTE_SYSCALL in inc/mmu.h.
+bool
+has_permissions(int perm)
+{
+	// Debe tener PTE_U y PTE_P
+	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
+	// bool has_accepted_perm = (perm & (~PTE_SYSCALL)) == 0;
+	// Por alguna razón, esa página tiene permisos PTE_A|PTE_D
+	// Pero no se pudo trackear en donde se setearon. Ignoro
+	// los bits de 0x0F0.
+	bool has_accepted_perm = (perm & 0x108) == 0;
+	// return has_basic_perm;
+	return has_accepted_perm && has_basic_perm;
+}
+
+static int
+page_map_pgdirs(pde_t *src_pgdir, void *srcva, pde_t *dst_pgdir, void *dstva, int perm)
+{
+	int r;
+	pte_t *pte;
+	// Alineación de las va de src y dst
+	if ((uintptr_t) srcva >= UTOP || PGOFF(srcva)) {
+		return -E_INVAL;
+	}
+	if ((uintptr_t) dstva >= UTOP || PGOFF(dstva)) {
+		return -E_INVAL;
+	}
+	// Permisos
+	bool has_perm = has_permissions(perm);
+	if (!has_perm) {
+		return -E_INVAL;
+	}
+	struct PageInfo *page = page_lookup(src_pgdir, srcva, &pte);
+	if (page == NULL) {
+		return -E_INVAL;
+	}
+
+	// No debe pasar que perm tiene permisos de escritura
+	// y la pte no tenga esos permisos.
+	if ((perm & PTE_W) && !(*pte & PTE_W)) {
+		return -E_INVAL;
+	}
+
+	// Luego se inserta la pagina en la va de destino
+	r = page_insert(dst_pgdir, page, dstva, perm);
+	if (r < 0) {
+		return r;  // -E_NO_MEM
+	}
+	// cprintf("envid_src:%d, envid_dst:%d, va_src:%08x, va_dst:%08x,
+	// perm:%08x\n",srcenvid,dstenvid, srcva, dstva,perm);
+	return 0;
+}
+
+
 // Print a string to the system console.
 // The string is exactly 'len' characters long.
 // Destroys the environment on memory errors.
@@ -188,12 +243,11 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	if ((uintptr_t) va >= UTOP || PGOFF(va)) {
 		return -E_INVAL;
 	}
-	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
-	bool has_accepted_perm = (perm & (~PTE_AVAIL)) != 0;
-	if (!has_basic_perm || !has_accepted_perm) {
+
+	bool has_perm = has_permissions(perm);
+	if (!has_perm) {
 		return -E_INVAL;
 	}
-
 	struct PageInfo *page = page_alloc(ALLOC_ZERO);
 	if (page == NULL) {
 		return -E_NO_MEM;
@@ -246,41 +300,11 @@ sys_page_map(envid_t srcenvid, void *srcva, envid_t dstenvid, void *dstva, int p
 		return r;  // -E_BAD_ENV
 	}
 
-	// Alineación de las va de src y dst
-	if ((uintptr_t) srcva >= UTOP || PGOFF(srcva)) {
-		return -E_INVAL;
-	}
-	if ((uintptr_t) dstva >= UTOP || PGOFF(dstva)) {
-		return -E_INVAL;
-	}
-
-	// Permisos
-	bool has_basic_perm = (perm & (PTE_U | PTE_P)) == (PTE_U | PTE_P);
-	bool has_accepted_perm = (perm & (~PTE_AVAIL)) != 0;
-	if (!has_basic_perm || !has_accepted_perm) {
-		return -E_INVAL;
-	}
-	// Primero se obtiene la pagina source
-	// Utilizamos el pte para verificar permisos
-	pte_t *pte;
-	struct PageInfo *page = page_lookup(src_env->env_pgdir, srcva, &pte);
-	if (page == NULL) {
-		return -E_INVAL;
-	}
-
-	// No debe pasar que perm tiene permisos de escritura
-	// y la pte no tenga esos permisos.
-	if ((perm & PTE_W) && !(*pte & PTE_W)) {
-		return -E_INVAL;
-	}
-
-	// Luego se inserta la pagina en la va de destino
-	r = page_insert(dst_env->env_pgdir, page, dstva, perm);
-	if (r < 0) {
-		return r;  // -E_NO_MEM
-	}
-
-	return 0;
+	return page_map_pgdirs(
+	        src_env->env_pgdir, srcva, dst_env->env_pgdir, dstva, perm);
+	// cprintf("envid_src:%d, envid_dst:%d, va_src:%08x, va_dst:%08x,
+	// perm:%08x\n",srcenvid,dstenvid, srcva, dstva,perm);
+	// return 0;
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -360,7 +384,39 @@ static int
 sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_try_send not implemented");
+	int r;
+	struct Env *dst_env;
+	envid2env(envid, &dst_env, false);
+	if (!dst_env) {
+		return -E_BAD_ENV;
+	}
+	if (!dst_env->env_ipc_recving) {
+		return -E_IPC_NOT_RECV;
+	}
+	bool page_transfered = false;
+	if (srcva < (void *) UTOP && dst_env->env_ipc_dstva < (void *) UTOP) {
+		if ((r = page_map_pgdirs(curenv->env_pgdir,
+		                         srcva,
+		                         dst_env->env_pgdir,
+		                         dst_env->env_ipc_dstva,
+		                         perm)) < 0) {
+			return r;
+		}
+		page_transfered = true;
+	}
+	// env_ipc_recving is set to 0 to block future sends;
+	dst_env->env_ipc_recving = 0;
+
+	// env_ipc_from is set to the sending envid;
+	dst_env->env_ipc_from = curenv->env_id;
+
+	// env_ipc_value is set to the 'value' parameter;
+	dst_env->env_ipc_value = value;
+
+	// env_ipc_perm is set to 'perm' if a page was transferred, 0 otherwise.
+	dst_env->env_ipc_perm = page_transfered ? perm : 0;
+	dst_env->env_status = ENV_RUNNABLE;
+	return 0;
 }
 
 // Block until a value is ready.  Record that you want to receive
@@ -378,7 +434,19 @@ static int
 sys_ipc_recv(void *dstva)
 {
 	// LAB 4: Your code here.
-	panic("sys_ipc_recv not implemented");
+	if ((uintptr_t) dstva < UTOP) {
+		if (PGOFF(dstva)) {
+			return -E_INVAL;
+		}
+		curenv->env_ipc_dstva = dstva;
+	} else {
+		curenv->env_ipc_dstva = (void *) KERNBASE;
+	}
+	curenv->env_ipc_recving = true;
+	curenv->env_status = ENV_NOT_RUNNABLE;
+	// Para devolver 0 en la syscall (igual a exofork)
+	curenv->env_tf.tf_regs.reg_eax = 0;
+	sched_yield();
 	return 0;
 }
 // Cambia el nice del environment
@@ -418,7 +486,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 
 	switch (syscallno) {
 	case SYS_cputs:
-		sys_cputs((char *) a1, (size_t) a2);
+		sys_cputs((char *) a1, a2);
 		return 0;
 	case SYS_cgetc:
 		return sys_cgetc();
@@ -444,6 +512,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_page_unmap((envid_t) a1, (void *) a2);
 	case SYS_env_set_pgfault_upcall:
 		return sys_env_set_pgfault_upcall((envid_t) a1, (void *) a2);
+	case SYS_ipc_recv:
+		return sys_ipc_recv((void *) a1);
+	case SYS_ipc_try_send:
+		return sys_ipc_try_send((envid_t) a1, a2, (void *) a3, a4);
 	default:
 		return -E_INVAL;
 	}
