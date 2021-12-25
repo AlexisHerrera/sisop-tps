@@ -77,9 +77,9 @@ pgfault(struct UTrapframe *utf)
 static int
 duppage(envid_t envid, unsigned pn)
 {
-	int r;
-
 	// LAB 4: Your code here.
+
+	int r;
 	uintptr_t addr = pn * PGSIZE;
 	pte_t pte = uvpt[pn];
 	// Permisos del padre menos PTE_W
@@ -88,9 +88,28 @@ duppage(envid_t envid, unsigned pn)
 	// si tiene el permiso PTE_SHARE se comparten las paginas
 	// Si tiene marcado el permiso de escritura
 	// se mapea con el flag PTE_COW
-	if ((par_perm & PTE_W) && !(par_perm & PTE_SHARE)) {
-		perm |= PTE_COW;
+	if ((!(par_perm & PTE_W) && !(par_perm & PTE_COW)) ||
+	    (par_perm & PTE_SHARE)) {
+		if ((r = sys_page_map(0,
+		                      (void *) addr,
+		                      envid,
+		                      (void *) addr,
+		                      pte & PTE_SYSCALL)) < 0) {
+			panic("sys_page_map: %e", r);
+		}
+		return 0;
 	}
+
+	perm |= PTE_COW;
+	// if ((r = sys_page_map(
+	//              0, (void *) addr, envid, (void *) addr, perm & PTE_SYSCALL)) <
+	//     0) {
+	// 	panic("sys_page_map: %e", r);
+	// }
+	// if ((r = sys_page_map(
+	//              0, (void *) addr, 0, (void *) addr, perm & PTE_SYSCALL)) < 0) {
+	// 	panic("sys_page_map: %e", r);
+	// }
 	if ((r = sys_page_map(0, (void *) addr, envid, (void *) addr, perm)) < 0) {
 		panic("sys_page_map: %e", r);
 	}

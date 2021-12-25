@@ -344,19 +344,18 @@ copy_shared_pages(envid_t child)
 			}
 			// Verifico que la pte este mapeada
 			pte_t pte = uvpt[PGNUM(addr)];
-			if (!(pte & PTE_P)) {
-				continue;
-			}
-			if (!(pte & PTE_SHARE)) {
-				continue;
-			}
-			int r;
-			if ((r = sys_page_map(thisenv->env_id,
-			                      (void *) addr,
-			                      child,
-			                      (void *) addr,
-			                      pte & PTE_SHARE)) < 0) {
-				return r;
+			// if (!(pte & PTE_P)) {
+			// 	continue;
+			// }
+			if (pte & PTE_SHARE) {
+				int r;
+				if ((r = sys_page_map(thisenv->env_id,
+				                      (void *) addr,
+				                      child,
+				                      (void *) addr,
+				                      pte)) < 0) {
+					return r;
+				}
 			}
 		}
 	}
