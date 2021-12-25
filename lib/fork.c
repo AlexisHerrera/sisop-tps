@@ -88,8 +88,7 @@ duppage(envid_t envid, unsigned pn)
 	// si tiene el permiso PTE_SHARE se comparten las paginas
 	// Si tiene marcado el permiso de escritura
 	// se mapea con el flag PTE_COW
-	if ((!(par_perm & PTE_W) && !(par_perm & PTE_COW)) ||
-	    (par_perm & PTE_SHARE)) {
+	if ((!(par_perm & PTE_W) && !(par_perm & PTE_COW)) || (par_perm & PTE_SHARE)) {
 		if ((r = sys_page_map(0,
 		                      (void *) addr,
 		                      envid,
@@ -99,17 +98,7 @@ duppage(envid_t envid, unsigned pn)
 		}
 		return 0;
 	}
-
 	perm |= PTE_COW;
-	// if ((r = sys_page_map(
-	//              0, (void *) addr, envid, (void *) addr, perm & PTE_SYSCALL)) <
-	//     0) {
-	// 	panic("sys_page_map: %e", r);
-	// }
-	// if ((r = sys_page_map(
-	//              0, (void *) addr, 0, (void *) addr, perm & PTE_SYSCALL)) < 0) {
-	// 	panic("sys_page_map: %e", r);
-	// }
 	if ((r = sys_page_map(0, (void *) addr, envid, (void *) addr, perm)) < 0) {
 		panic("sys_page_map: %e", r);
 	}
