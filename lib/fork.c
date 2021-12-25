@@ -85,9 +85,10 @@ duppage(envid_t envid, unsigned pn)
 	// Permisos del padre menos PTE_W
 	int par_perm = pte & 0xFFF;
 	int perm = par_perm & (~PTE_W);
+	// si tiene el permiso PTE_SHARE se comparten las paginas
 	// Si tiene marcado el permiso de escritura
 	// se mapea con el flag PTE_COW
-	if ((par_perm & PTE_W)) {
+	if ((par_perm & PTE_W) && !(par_perm & PTE_SHARE)) {
 		perm |= PTE_COW;
 	}
 	if ((r = sys_page_map(0, (void *) addr, envid, (void *) addr, perm)) < 0) {

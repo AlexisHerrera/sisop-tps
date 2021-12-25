@@ -323,5 +323,42 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+	// Para poder descartar una pgdir que no tiene nada mapeado
+	// (o sea que (PDE & PTE_P) == 0), no podemos iterar sobre las direcciones
+	// porque a priori no puedo saber si esa dirección pertenecía
+	// a una pde que ya había visto que no estaba mapeada.
+	// Entonces, lo más conveniente es iterar sobre el pgdir en la
+	// region que mapea desde 0 a UTOP. Similar a env_free()
+	int pdeno, pteno, addr;
+	for (pdeno = 0; pdeno < PDX(UTOP); pdeno++) {
+		// only look at mapped page tables
+		if (!(uvpd[pdeno] & PTE_P)) {
+			continue;
+		}
+		// La pde está mapeada. Tengo que revisar toda la pte
+		// para obtener las direcciones de esta region.
+		for (pteno = 0; pteno < NPTENTRIES; pteno++) {
+			addr = (uintptr_t) PGADDR(pdeno, pteno, 0);
+			if (addr == (UXSTACKTOP - PGSIZE)) {
+				continue;
+			}
+			// Verifico que la pte este mapeada
+			pte_t pte = uvpt[PGNUM(addr)];
+			if (!(pte & PTE_P)) {
+				continue;
+			}
+			if (!(pte & PTE_SHARE)) {
+				continue;
+			}
+			int r;
+			if ((r = sys_page_map(thisenv->env_id,
+			                      (void *) addr,
+			                      child,
+			                      (void *) addr,
+			                      pte & PTE_SHARE)) < 0) {
+				return r;
+			}
+		}
+	}
 	return 0;
 }

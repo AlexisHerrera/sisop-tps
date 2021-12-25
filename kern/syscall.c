@@ -203,9 +203,10 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	if ((r = envid2env(envid, &env, true)) < 0) {
 		return r;  // -E_BAD_ENV
 	}
-	
-	if ((r = user_mem_check(env, (void *) tf, sizeof(struct Trapframe), PTE_U)) < 0) {
-		return r; // -E_FAULT bad address
+
+	if ((r = user_mem_check(env, (void *) tf, sizeof(struct Trapframe), PTE_U)) <
+	    0) {
+		return r;  // -E_FAULT bad address
 	}
 
 	memcpy(&env->env_tf, tf, sizeof(struct Trapframe));
@@ -526,7 +527,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	case SYS_ipc_try_send:
 		return sys_ipc_try_send((envid_t) a1, a2, (void *) a3, a4);
 	case SYS_env_set_trapframe:
-		return sys_env_set_trapframe((envid_t) a1, (struct Trapframe *) a2);
+		return sys_env_set_trapframe((envid_t) a1,
+		                             (struct Trapframe *) a2);
 	default:
 		return -E_INVAL;
 	}
