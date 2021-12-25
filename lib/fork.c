@@ -96,16 +96,18 @@ duppage(envid_t envid, unsigned pn)
 		                      pte & PTE_SYSCALL)) < 0) {
 			panic("sys_page_map: %e", r);
 		}
-	} else { // PTE_W o PTE_COW
+	} else {  // PTE_W o PTE_COW
 		perm |= PTE_COW;
-		if ((r = sys_page_map(0, (void *) addr, envid, (void *) addr, perm)) < 0) {
+		if ((r = sys_page_map(
+		             0, (void *) addr, envid, (void *) addr, perm)) < 0) {
 			panic("sys_page_map: %e", r);
 		}
 		// Si el destino tiene marcado el PTE_COW
 		// remapeo la dirección con PTE_COW
 		if (perm & PTE_COW) {
-			if ((r = sys_page_map(0, (void *) addr, 0, (void *) addr, perm)) <
-				0) {
+			if ((r = sys_page_map(
+			             0, (void *) addr, 0, (void *) addr, perm)) <
+			    0) {
 				panic("sys_page_map: %e", r);
 			}
 		}
