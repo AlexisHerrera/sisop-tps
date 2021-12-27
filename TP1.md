@@ -52,4 +52,14 @@ Al usar las paginas grandes, no hace falta reservar manualmente una tabla de ent
 Para las short pages ocupamos una posicion en la page dir que hace referencia a un page table de 1024 entradas de 4 bytes.
 En cambio para las large pages solo necesitaremos la tabla de page dir, el cual ocupa 4 bytes x 1024 entradas a esa tabla.
 Entonces me ahorro por cada entrada de page dir, esa page table de 1024 x 4 bytes = 4096 bytes = 4KibiBytes.
-Lógicamente cuanto más direcciones tengamos a las que direccionar, mas ahorro tendremos.
+
+Entonces para calcular el ahorro en función de la memoria física disponible en JOS podemos hacer el siguiente cálculo:
+
+Ahorro [KiB] = (Memoria Física Disponible [MiB] / 4 MiB) * 4KiB
+
+Por ejemplo:
+* Si se tiene una disponibilidad física de 64 MiB, se ahorra 64 KiB
+* Si se tiene una disponibilidad física de 128 MiB, se ahorra 128 KiB
+* Si se tiene una disponibilidad física de 4 GiB, se ahorra 4MiB. 
+
+Como se puede ver, es despreciable comparado al ahorro de almacenar traducciones en la TLB para una large-page vs short-page.

@@ -431,31 +431,32 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 {
 	// Hay que recorrer desde va hasta va+size de las page table entries
 	// Luego para cada pte, mapeo/guardo la dirección física y los permisos
+	// Al menos tiene que estar alineado a PGSIZE va y pa
+	assert(va % PGSIZE == 0);
+	assert(pa % PGSIZE == 0);
+	uintptr_t va_size = 0;
+	while (va_size < size) {
 #ifdef TP1_PSE
-	// Large pages activado y es una large table entry
-	if ((size % PTSIZE == 0) && (va % PTSIZE == 0) && (pa % PTSIZE == 0)) {
-		assert(size % PTSIZE == 0);
-		assert(va % PTSIZE == 0);
-		assert(pa % PTSIZE == 0);
-		for (int i = 0; i < size / PTSIZE; i++) {
-			// Obtengo la dirección de la página y almaceno la direccion física
+		// Se puede mapear de a large-pages
+		// Para ello deberán estar alineados a PTSIZE la va y pa
+		// y tener cuidado de no mapear mas alla del size
+		if ((va % PTSIZE == 0) && (pa % PTSIZE == 0) &&
+		    (size >= va_size + PTSIZE)) {
 			pde_t *large_table_entry = pgdir + PDX(va);
 			*large_table_entry = pa | perm | PTE_PS | PTE_P;
 			va += PTSIZE;
 			pa += PTSIZE;
+			va_size += PTSIZE;
+			continue;
 		}
-		return;
-	}
+		// fall through si no cumple para mapear large-pages
 #endif
-	assert(size % PGSIZE == 0);
-	assert(va % PGSIZE == 0);
-	assert(pa % PGSIZE == 0);
-	// Large pages desactivado o es una short page
-	for (int i = 0; i < size / PGSIZE; i++) {
+		// Large pages desactivado o no cumple para mapear large-pages
 		pte_t *table_entry = pgdir_walk(pgdir, (const void *) va, true);
 		*table_entry = pa | perm | PTE_P;
 		va += PGSIZE;
 		pa += PGSIZE;
+		va_size += PGSIZE;
 	}
 }
 
