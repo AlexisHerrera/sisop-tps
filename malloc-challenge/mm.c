@@ -8,7 +8,7 @@
 // Nunca una región puede ser inferior a este tamaño
 #define MIN_REGION_SIZE 32
 // Tamaño del primer bloque que se pide con mmap
-#define BLOCK_SIZE 16 * 1024  // 16 KiB ()
+#define BLOCK_SIZE 16 * 1024  // 16 KiB
 
 #define MAGIC_NO 1234567
 
@@ -73,7 +73,7 @@ mm_alloc(size_t size)
 		mm_init();
 	}
 	size_t total_size = size + sizeof(header_t);
-	node_t *free_region = find_free_region(size);
+	node_t *free_region = find_free_region(total_size);
 	if (free_region == NULL) {
 		// No hay mas memoria libre, por ahora devuelvo NULL
 		errno = ENOMEM;
@@ -100,4 +100,12 @@ void *
 mm_calloc(size_t nmemb, size_t size)
 {
 	return NULL;
+}
+
+/* Test only*/
+int
+mm_initial_avail_space()
+{
+	// total - header del bloque allocado
+	return BLOCK_SIZE - sizeof(header_t) - sizeof(node_t);
 }
