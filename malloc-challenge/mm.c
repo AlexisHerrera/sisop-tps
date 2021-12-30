@@ -62,6 +62,7 @@ find_free_region(size_t size)
 	return free_region;
 }
 
+// total size debe ser al menos 16 bytes?
 void *
 mm_alloc(size_t size)
 {
@@ -91,9 +92,19 @@ mm_alloc(size_t size)
 	// Le devuelvo el puntero a la posicion donde empieza el payload
 	return (void *) free_region + sizeof(header_t);
 }
+
 void
 mm_free(void *ptr)
 {
+	header_t *region_to_free = (header_t *) (ptr - sizeof(header_t));
+	if (region_to_free->magic != MAGIC_NO) {
+		// Se intento liberar una region inválida
+		return;
+	}
+	node_t *new_free_node = (node_t *) region_to_free;
+	new_free_node->size = region_to_free->size;
+	new_free_node->next = head;
+	head = new_free_node;
 	return;
 }
 void *
@@ -108,4 +119,15 @@ mm_initial_avail_space()
 {
 	// total - header del bloque allocado
 	return BLOCK_SIZE - sizeof(header_t) - sizeof(node_t);
+}
+int
+mm_cur_avail_space()
+{
+	int avail_free_space = 0;
+	node_t *iter = head;
+	while (iter != NULL) {
+		avail_free_space += iter->size;
+		iter = iter->next;
+	}
+	return avail_free_space;
 }

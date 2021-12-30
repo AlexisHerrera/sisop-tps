@@ -7,6 +7,7 @@
 #define GREEN "\033[32m"  /* Green */
 #define YELLOW "\033[33m" /* Yellow */
 
+void
 test_basic_functionality()
 {
 	printf("- Alloc 0: ");
@@ -31,7 +32,7 @@ test_basic_functionality()
 
 	printf("- Memory can be freed: ");
 	mm_free(ptr);
-	// assert mm_cur_avail_space == mm_initial_avail_space
+	assert(mm_cur_avail_space() == mm_initial_avail_space());
 	printf(GREEN "OK\n" RESET);
 }
 

@@ -5,3 +5,4 @@ void *mm_calloc(size_t nmemb, size_t size);
 
 /*Test only*/
 int mm_initial_avail_space();
+int mm_cur_avail_space();
