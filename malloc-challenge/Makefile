@@ -1,4 +1,4 @@
-CFLAGS := -ggdb3 -O2 -Wall -Wextra -std=c11
+CFLAGS := -ggdb3 -O0 -Wall -Wextra -std=c11
 CFLAGS += -Wmissing-prototypes -Wvla
 CPPFLAGS := -D_DEFAULT_SOURCE
 

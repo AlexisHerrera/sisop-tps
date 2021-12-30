@@ -10,6 +10,7 @@
 void
 test_basic_functionality()
 {
+	printf("Malloc test 1 - Funcionalidad básica\n");
 	printf("- Alloc 0: ");
 	assert(mm_alloc(0) == NULL);
 	printf(GREEN "OK\n" RESET);
@@ -37,9 +38,40 @@ test_basic_functionality()
 }
 
 void
+test_coalesce()
+{
+	printf("Malloc test 2 - Coalesce\n");
+	void *ptr1, *ptr2;
+	// Fuerzo un split de bloques que deben ser combinados
+	// (si bien el test 1 ya lo hace, es para no depender de el)
+	int initial_free_space = mm_cur_avail_space();
+	ptr1 = mm_alloc(100);
+	ptr2 = mm_alloc(100);
+	mm_free(ptr1);
+	mm_free(ptr2);
+	int final_free_space = mm_cur_avail_space();
+	printf("- Does not lose memory after allocs: ");
+	assert(initial_free_space == final_free_space);
+	printf(GREEN "OK\n" RESET);
+
+	printf("- Can allocate total avail_space: ");
+	ptr1 = mm_alloc(mm_cur_avail_space());
+	assert(ptr1 != NULL);
+	printf(GREEN "OK\n" RESET);
+
+	printf("- Memory can be freed: ");
+	mm_free(ptr1);
+	assert(mm_cur_avail_space() == mm_initial_avail_space());
+	printf(GREEN "OK\n" RESET);
+}
+
+void
 test_malloc_edge_cases()
 {
+	// Coalesce must be implemented
+	printf("Malloc test 3 - Casos borde\n");
 	void *ptr;
+
 	printf("- Should not allocate more than available space (%d bytes): ",
 	       mm_initial_avail_space());
 	ptr = mm_alloc(mm_initial_avail_space() + 1);
@@ -51,13 +83,18 @@ test_malloc_edge_cases()
 	ptr = mm_alloc(mm_initial_avail_space());
 	assert(ptr != NULL);
 	printf(GREEN "OK\n" RESET);
+
+	printf("- Memory can be freed: ");
+	mm_free(ptr);
+	assert(mm_cur_avail_space() == mm_initial_avail_space());
+	printf(GREEN "OK\n" RESET);
 }
 
 int
 main()
 {
-	printf("Malloc test 1 - Funcionalidad básica\n");
 	test_basic_functionality();
-
+	test_coalesce();
+	test_malloc_edge_cases();
 	return 0;
 }
