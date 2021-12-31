@@ -1,100 +1,69 @@
-#include <stdio.h>
-#include <assert.h>
+#ifdef LIB_MALLOC
+#include "stdlib.h"
+#else
 #include "mm.h"
-#define RESET "\033[0m"
-#define BLACK "\033[30m"  /* Black */
-#define RED "\033[31m"    /* Red */
-#define GREEN "\033[32m"  /* Green */
-#define YELLOW "\033[33m" /* Yellow */
-
-void
-test_basic_functionality()
+void *
+malloc(size_t size)
 {
-	printf("Malloc test 1 - Funcionalidad básica\n");
-	printf("- Alloc 0: ");
-	assert(mm_alloc(0) == NULL);
-	printf(GREEN "OK\n" RESET);
-
-	void *ptr;
-	printf("- Alloc 100: ");
-	ptr = mm_alloc(100);
-	assert(ptr != NULL);
-	printf(GREEN "OK\n" RESET);
-
-	printf("- Allocated memory can be used: ");
-	char *casted_string = ptr;
-	for (size_t i = 0; i < 100; i++) {
-		casted_string[i] = 'a';
-	}
-	for (size_t i = 0; i < 100; i++) {
-		assert(casted_string[i] == 'a');
-	}
-	printf(GREEN "OK\n" RESET);
-
-	printf("- Memory can be freed: ");
+	return mm_alloc(size);
+}
+void
+free(void *ptr)
+{
 	mm_free(ptr);
-	assert(mm_cur_avail_space() == mm_initial_avail_space());
-	printf(GREEN "OK\n" RESET);
 }
-
-void
-test_coalesce()
-{
-	printf("Malloc test 2 - Coalesce\n");
-	void *ptr1, *ptr2;
-	// Fuerzo un split de bloques que deben ser combinados
-	// (si bien el test 1 ya lo hace, es para no depender de el)
-	int initial_free_space = mm_cur_avail_space();
-	ptr1 = mm_alloc(100);
-	ptr2 = mm_alloc(100);
-	mm_free(ptr1);
-	mm_free(ptr2);
-	int final_free_space = mm_cur_avail_space();
-	printf("- Does not lose memory after allocs: ");
-	assert(initial_free_space == final_free_space);
-	printf(GREEN "OK\n" RESET);
-
-	printf("- Can allocate total avail_space: ");
-	ptr1 = mm_alloc(mm_cur_avail_space());
-	assert(ptr1 != NULL);
-	printf(GREEN "OK\n" RESET);
-
-	printf("- Memory can be freed: ");
-	mm_free(ptr1);
-	assert(mm_cur_avail_space() == mm_initial_avail_space());
-	printf(GREEN "OK\n" RESET);
-}
-
-void
-test_malloc_edge_cases()
-{
-	// Coalesce must be implemented
-	printf("Malloc test 3 - Casos borde\n");
-	void *ptr;
-
-	printf("- Should not allocate more than available space (%d bytes): ",
-	       mm_initial_avail_space());
-	ptr = mm_alloc(mm_initial_avail_space() + 1);
-	assert(ptr == NULL);
-	printf(GREEN "OK\n" RESET);
-
-	printf("- Can allocate all memory available (%d bytes): ",
-	       mm_initial_avail_space());
-	ptr = mm_alloc(mm_initial_avail_space());
-	assert(ptr != NULL);
-	printf(GREEN "OK\n" RESET);
-
-	printf("- Memory can be freed: ");
-	mm_free(ptr);
-	assert(mm_cur_avail_space() == mm_initial_avail_space());
-	printf(GREEN "OK\n" RESET);
-}
+#endif
+#include <assert.h>
 
 int
-main()
+main(int argc, char const *argv[])
 {
-	test_basic_functionality();
-	test_coalesce();
-	test_malloc_edge_cases();
+	// Se crea reserva memoria
+	int *arr = malloc(100 * sizeof(int));
+	for (size_t i = 0; i < 100; i++) {
+		arr[i] = i + 1;
+	}
+	// Se utiliza la memoria
+	int sum = 0;
+	for (size_t i = 0; i < 100; i++) {
+		sum += arr[i];
+	}
+	assert(sum == (100 * 101) / 2);
+	// Se libera la memoria
+	free(arr);
+
+	// Se piden muchos bloques, se pueden usar y liberar todos
+	int **pointers = malloc(30 * sizeof(int *));
+	for (size_t i = 0; i < 30; i++) {
+		pointers[i] = malloc(sizeof(int) * 100);
+	}
+	// Seteo cada arreglo con 1
+	for (size_t i = 0; i < 30; i++) {
+		int *arr = pointers[i];
+		for (size_t j = 0; j < 100; j++) {
+			arr[i] = 1;
+		}
+	}
+
+	// Verifico uso
+	for (size_t i = 0; i < 30; i++) {
+		int *arr = pointers[i];
+		int suma = 0;
+		for (size_t j = 0; j < 100; j++) {
+			suma += arr[i];
+		}
+		assert(suma == 100);
+	}
+
+	// Libero todos los bloques
+	for (size_t i = 0; i < 30; i++) {
+		free(pointers[i]);
+	}
+	free(pointers);
+
+	// Probando si se hizo coalesce
+	int *big_region = malloc(16000);
+	assert(big_region != NULL);
+	free(big_region);
 	return 0;
 }

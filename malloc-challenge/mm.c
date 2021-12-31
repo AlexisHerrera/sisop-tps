@@ -5,6 +5,9 @@
 #include <errno.h>
 #include <string.h>
 #include <stdio.h>
+
+// #include <signal.h>
+
 // Tamaño máximo de memoria disponible de la librería
 #define MAX_HEAP 32 * 1024 * 1024  // 32 MiB (32*2^20)
 // Nunca una región puede ser inferior a este tamaño
@@ -102,7 +105,14 @@ coalesce()
 	}
 }
 
-// total size debe ser al menos 16 bytes?
+static size_t
+max(size_t x, size_t y)
+{
+	return (x > y) ? x : y;
+}
+
+/* Implementación*/
+
 void *
 mm_alloc(size_t size)
 {
@@ -113,6 +123,8 @@ mm_alloc(size_t size)
 	if (heap_start == NULL) {
 		mm_init();
 	}
+	size = max(size, MIN_REGION_SIZE);
+
 	size_t total_size = size + sizeof(header_t);
 	node_t *free_region = find_free_region(total_size);
 	if (free_region == NULL) {
@@ -136,14 +148,28 @@ mm_alloc(size_t size)
 void
 mm_free(void *ptr)
 {
+	if (ptr == NULL) {
+		return;
+	}
+	if (heap_start == NULL || ptr < heap_start ||
+	    ptr > (heap_start + BLOCK_SIZE)) {
+		// raise(SIGSEGV);
+		return;
+	}
+
 	header_t *region_to_free = (header_t *) (ptr - sizeof(header_t));
 	if (region_to_free->magic != MAGIC_NO) {
 		// Se intento liberar una region inválida
 		return;
 	}
 	node_t *new_free_node = (node_t *) region_to_free;
+	// Limpio toda la region. Me guardo el tamaño antes de borrar todo
+	int size_region_to_free = region_to_free->size;
+	memset(region_to_free, 0, size_region_to_free + sizeof(header_t));
+
+	// Seteo valores del nuevo nodo libre y lo inserto a la lista
 	new_free_node->size =
-	        region_to_free->size + sizeof(header_t) - sizeof(node_t);
+	        size_region_to_free + sizeof(header_t) - sizeof(node_t);
 	new_free_node->next = head;
 	head = new_free_node;
 
