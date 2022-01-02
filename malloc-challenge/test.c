@@ -7,6 +7,7 @@
 #define GREEN "\033[32m"  /* Green */
 #define YELLOW "\033[33m" /* Yellow */
 
+
 static void
 test_basic_functionality()
 {
@@ -34,6 +35,11 @@ test_basic_functionality()
 	printf("- Memory can be freed: ");
 	mm_free(ptr);
 	assert(mm_cur_avail_space() == mm_initial_avail_space());
+	printf(GREEN "OK\n" RESET);
+
+	printf("- Alocated medium block: ");
+	ptr = mm_alloc(BLOCK_SML + 100);
+	assert(ptr != NULL);
 	printf(GREEN "OK\n" RESET);
 }
 
