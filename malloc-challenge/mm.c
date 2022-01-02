@@ -9,11 +9,9 @@
 // #include <signal.h>
 
 // Tamaño máximo de memoria disponible de la librería
-#define MAX_HEAP 32 * 1024 * 1024  // 32 MiB (32*2^20)
+#define MAX_HEAP 2 * 32 * 1024 * 1024  // 64 MiB (64*2^20)
 // Nunca una región puede ser inferior a este tamaño
 #define MIN_REGION_SIZE 32
-// Tamaño del primer bloque que se pide con mmap
-#define BLOCK_SIZE 16 * 1024  // 16 KiB
 
 #define MAGIC_NO 1234567
 
@@ -30,16 +28,13 @@ typedef struct __header_t {
 
 void *heap_start = NULL;
 node_t *head = NULL;
-int curr_size = 0;
+int blk_mem_alocated = 0;
 
 /* Funciones auxiliares*/
 static node_t *
 aloc_block(size_t size)
 {
 	if (size <= 0) {
-		return NULL;
-	}
-	if ((curr_size+size) >= MAX_HEAP) {
 		return NULL;
 	}
 	// MAP_ANON indica que no está backeado por un archivo
@@ -54,7 +49,10 @@ aloc_block(size_t size)
 	} else {
 		return NULL;
 	}
-	
+	if ((blk_mem_alocated+block_size) > MAX_HEAP) {
+		return NULL;
+	}
+	blk_mem_alocated += block_size;
 	node_t *new_block = mmap(NULL,
 	            block_size,
 	            PROT_READ | PROT_WRITE,
@@ -64,9 +62,11 @@ aloc_block(size_t size)
 	if (new_block == MAP_FAILED) {
 		exit(-1);
 	}
-	new_block->size = block_size - sizeof(node_t);
+	new_block->size = block_size - sizeof(header_t);
 	if (heap_start == NULL) {
 		heap_start = new_block;
+	}
+	if (head == NULL) {
 		head = new_block;
 		head->next = NULL;
 		head->anterior = NULL;
@@ -106,9 +106,9 @@ coalesce()
 
 	while (next_node != NULL) {
 		void *back_contiguous_reg =
-		        (void *) next_node + sizeof(node_t) + next_node->size;
+		        (void *) next_node + sizeof(header_t) + next_node->size;
 		void *forw_contiguous_reg =
-		        (void *) base_node + sizeof(node_t) + base_node->size;
+		        (void *) base_node + sizeof(header_t) + base_node->size;
 		if (back_contiguous_reg == (void *) base_node) {
 			// Respecto de base, la region de atrás está libre.
 			if (base_node == head) {
@@ -119,12 +119,12 @@ coalesce()
 				next_node->anterior = base_node->anterior;
 				base_node->anterior->next = next_node;
 			}
-			next_node->size = next_node->size + sizeof(node_t) +
+			next_node->size = next_node->size + sizeof(header_t) +
 			                  base_node->size;
 			memset(base_node, 0, sizeof(node_t));
 		} else if (forw_contiguous_reg == next_node) {
 			// Respecto de base, la region de adelante está libre
-			base_node->size = base_node->size + sizeof(node_t) +
+			base_node->size = base_node->size + sizeof(header_t) +
 			                  next_node->size;
 			if (next_node->next != NULL) {
 				next_node->next->anterior = base_node;
@@ -205,11 +205,11 @@ mm_free(void *ptr)
 	if (ptr == NULL) {
 		return;
 	}
-	if (heap_start == NULL || ptr < heap_start ||
-	    ptr > (heap_start + MAX_HEAP)) {
-		// raise(SIGSEGV);
-		return;
-	}
+	// if (heap_start == NULL || ptr < heap_start ||
+	//     ptr > (heap_start + MAX_HEAP)) {
+	// 	// raise(SIGSEGV);
+	// 	return;
+	// }
 
 	header_t *region_to_free = (header_t *) (ptr - sizeof(header_t));
 	if (region_to_free->magic != MAGIC_NO) {
@@ -223,11 +223,12 @@ mm_free(void *ptr)
 	memset(region_to_free, 0, size_region_to_free + sizeof(header_t));
 
 	// Seteo valores del nuevo nodo libre y lo inserto a la lista
-	new_free_node->size =
-	        size_region_to_free + sizeof(header_t) - sizeof(node_t);
+	new_free_node->size = size_region_to_free;
 	new_free_node->next = head;
 	new_free_node->anterior = NULL;
-	head->anterior = new_free_node;
+	if (head != NULL) {
+		head->anterior = new_free_node;
+	}
 	head = new_free_node;
 	coalesce();
 	return;
@@ -243,7 +244,7 @@ int
 mm_initial_avail_space()
 {
 	// total - header del bloque allocado
-	return MAX_HEAP;
+	return BLOCK_SML - sizeof(header_t);
 }
 
 // Indica cuanto es la memoria disponible para allocar.
@@ -253,9 +254,9 @@ mm_cur_avail_space()
 {
 	int avail_free_space = 0;
 	int count_nodes = 0;
-	if (head == NULL) {
-		return mm_initial_avail_space();  // 16360
-	}
+	// if (head == NULL) {
+		// return mm_initial_avail_space();  // 16360
+	// }
 	node_t *iter = head;
 	while (iter != NULL) {
 		// fprintf(stderr, "nodo %d tiene %d bytes \n", count_nodes, iter->size);
@@ -263,9 +264,20 @@ mm_cur_avail_space()
 		iter = iter->next;
 		count_nodes++;
 	}
-	if (count_nodes == 1) {
-		avail_free_space -= sizeof(header_t);  // 16368-8 = 16360
-	}
+	// if (count_nodes == 1) {
+	// 	avail_free_space -= sizeof(header_t);  // 16368-8 = 16360
+	// }
 	// printf("nodos: %d \n", count_nodes);
 	return avail_free_space;
+}
+
+int
+count_nodes() {
+	node_t *iter = head;
+	int cont = 0;
+	while (iter != NULL) {
+		cont++;
+		iter = iter->next;
+	}
+	return cont;
 }
