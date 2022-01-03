@@ -1,5 +1,5 @@
 #ifdef LIB_MALLOC
-#include "stdlib.h"
+#include <stdlib.h>
 #else
 #include "mm.h"
 void *
@@ -16,7 +16,7 @@ free(void *ptr)
 #include <assert.h>
 
 int
-main(int argc, char const *argv[])
+main()
 {
 	// Se crea reserva memoria
 	int *arr = malloc(100 * sizeof(int));

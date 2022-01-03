@@ -1,5 +1,8 @@
 # Malloc challenge
 
+Alcance individual 
+---
+
 ## Parte 1:
 
 mmap crea un nuevo mapeo en la Virtual Address space del proceso que la llama.
@@ -15,7 +18,7 @@ Pensando en el caso donde ocupo toda la memoria de golpe. Debería quedar así:
 Por lo que lo máximo que se puede pedir es 16360 bytes.
 
 Se brinda un set de test para comprobar funcionamiento interno de la implementación de la libreria:  ```./test ```.
-Este set de pruebas tiene un análisis mas detallado del manejo de la memoria, los cuales no serían fáciles de probar con la libreria original (por ejemplo ```mm_cur_avail_space```)
+Este set de pruebas tiene un análisis mas detallado del manejo de la memoria, los cuales no serían fáciles de probar con la libreria original (por ejemplo ```mm_cur_avail_space``` no es una funcion que tenga malloc)
 
 ### Programa de ejemplo
 
@@ -62,4 +65,11 @@ El output en los dos es el mismo:
 ```
 2. Si se quiere evitar el problema anterior, se debe dejar de utilizar como bloque minimo a MIN_BLOCK_SIZE.
  Existen otras mejoras, por ejemplo al buscar un siguiente bloque libre. Por ejemplo con next fit puedo esparcir las regiones allocadas al final de la region de memoria, evitando así los splinters al inicio de la memoria.
-3. Binning mantiene agrupado regiones de memoria disponibles según su tamaño. Esto permite mayor rapidez en encontrar una región libre para un pedido de memoria. En cambio, con first fit debo recorrer, en el peor caso, cada bloque libre. Con binning simplemente sería ir al bloque correspondiente al pedido de memoria y verificar si en esa lista hay un bloque libre y alojarlo allí, casi O(1).
+3. Binning mantiene agrupado regiones de memoria disponibles según su tamaño. Esto permite mayor rapidez en encontrar una región libre para un pedido de memoria. En cambio, con first fit debo recorrer, en el peor caso, cada bloque libre. Con binning simplemente sería ir al bloque correspondiente al pedido de memoria y verificar si en esa lista hay un bloque libre y alojarlo allí, siendo este mucho más rápido ya que descarta desde el inicio todos los bloques mas chicos y mas grandes.
+
+Alcance grupal
+---
+
+## Parte 2: Agregando más bloques
+
+Se agregaron tests al archivo test.c que testean la implementación multibloque. Sin embargo, el test de coalesce single block quedó obsoleto.

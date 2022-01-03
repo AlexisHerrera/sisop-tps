@@ -35,7 +35,7 @@ typedef struct __header_t {
 void *heap_start = NULL;
 node_t *head = NULL;
 int block_id_gen = 0;
-int blk_mem_alocated = 0;
+int blk_mem_allocated = 0;
 
 /* Funciones auxiliares*/
 
@@ -52,13 +52,11 @@ min(size_t x, size_t y)
 }
 
 static node_t *
-aloc_block(size_t size)
+alloc_block(size_t size)
 {
 	if (size <= 0) {
 		return NULL;
 	}
-	// MAP_ANON indica que no está backeado por un archivo
-	// MAP_PRIVATE hace que se haga un mapeo con COW
 	int block_size = 0;
 	unsigned short block_type = -1;
 	if (size <= BLOCK_SML) {
@@ -73,9 +71,11 @@ aloc_block(size_t size)
 	} else {
 		return NULL;
 	}
-	if ((blk_mem_alocated+block_size) > MAX_HEAP) {
+	if ((blk_mem_allocated+block_size) > MAX_HEAP) {
 		return NULL;
 	}
+	// MAP_ANON indica que no está backeado por un archivo
+	// MAP_PRIVATE hace que se haga un mapeo con COW
 	node_t *new_block = mmap(NULL,
 	            block_size,
 	            PROT_READ | PROT_WRITE,
@@ -85,7 +85,7 @@ aloc_block(size_t size)
 	if (new_block == MAP_FAILED) {
 		exit(-1);
 	}
-	blk_mem_alocated += block_size;
+	blk_mem_allocated += block_size;
 	new_block->size = block_size - sizeof(header_t);
 	new_block->type = block_type;
 	new_block->id = block_id_gen;
@@ -119,15 +119,14 @@ find_free_region(size_t size)
 		}
 		iter = iter->next;
 	}
-	free_region = aloc_block(size);
+	free_region = alloc_block(size);
 	return free_region;
 }
-
 /*
- * Itera la lista de regiones/nodos libres uniéndolas si son contiguas
- */
-
-int check_empty_block(node_t *block) {
+ * Si el nodo tiene libre el tamaño de un bloque y es de ese tipo de bloque
+   entonces devuelve el tamaño del bloque a liberar.
+*/
+int calc_size_to_unmap(node_t *block) {
 	if ((block->type == SML_T) && (block->size == (BLOCK_SML - sizeof(header_t)))) {
 		return BLOCK_SML;
 	} else if ((block->type == MED_T) && (block->size == (BLOCK_MED - sizeof(header_t)))) {
@@ -138,6 +137,9 @@ int check_empty_block(node_t *block) {
 	return 0;
 }
 
+/*
+ * Itera la lista de regiones/nodos libres uniéndolas si son contiguas
+ */
 static void
 coalesce()
 {
@@ -145,10 +147,10 @@ coalesce()
 	node_t *next_node = base_node->next;
 
 	// caso borde: si uso todo un bloque y lo libero, me queda solo 1 nodo en la lista y no entra al loop
-	{int size_to_unmap = check_empty_block(head);
+	{int size_to_unmap = calc_size_to_unmap(head);
 	if (size_to_unmap) {
 		munmap(head, size_to_unmap);
-		blk_mem_alocated -= size_to_unmap;
+		blk_mem_allocated -= size_to_unmap;
 		head = NULL;
 	} }
 	while (next_node) {
@@ -174,7 +176,7 @@ coalesce()
 			next_node->size = next_node->size + sizeof(header_t) +
 			                  base_node->size;
 			memset(base_node, 0, sizeof(node_t));
-			int size_to_unmap = check_empty_block(next_node);
+			int size_to_unmap = calc_size_to_unmap(next_node);
 			if (size_to_unmap) {
 				// si el bloque esta vacio, lo tengo que borrar de la lista y liberar la memoria
 				if (next_node == head) {
@@ -189,7 +191,7 @@ coalesce()
 				next_node = next_node->next->next;
 				// libero la memoria
 				munmap(next_node, size_to_unmap);
-				blk_mem_alocated -= size_to_unmap;
+				blk_mem_allocated -= size_to_unmap;
 			}
 		} else if (forw_contiguous_reg == next_node) {
 			// Respecto de base, la region de adelante está libre
@@ -200,7 +202,7 @@ coalesce()
 			}
 			base_node->next = next_node->next;
 			memset(next_node, 0, sizeof(node_t));
-			int size_to_unmap = check_empty_block(base_node);
+			int size_to_unmap = calc_size_to_unmap(base_node);
 			if (size_to_unmap) {
 				// si el bloque esta vacio, lo tengo que borrar de la lista y liberar la memoria
 				node_t *new_next = base_node->next;
@@ -214,7 +216,7 @@ coalesce()
 					base_node->anterior->next = new_next;
 				}
 				munmap(base_node, size_to_unmap);
-				blk_mem_alocated -= size_to_unmap;
+				blk_mem_allocated -= size_to_unmap;
 				if (!new_next) {
 					break;
 				}
@@ -331,6 +333,8 @@ mm_calloc(size_t nmemb, size_t size)
 	}
 	void * ptr = mm_alloc(result);
 	if (!ptr) return NULL;
+	// Segun la man 2 calloc, setea la memoria a 0.
+	memset(ptr, 0, result);
 	return ptr;
 }
 
@@ -348,12 +352,10 @@ int
 mm_cur_avail_space()
 {
 	int avail_free_space = 0;
-	int count_nodes = 0;
 	node_t *iter = head;
 	while (iter) {
 		avail_free_space += iter->size;
 		iter = iter->next;
-		count_nodes++;
 	}
 	return avail_free_space;
 }
