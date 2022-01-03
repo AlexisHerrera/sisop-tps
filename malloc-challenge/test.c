@@ -190,10 +190,33 @@ test_free()
 
 static void
 test_calloc() {
-	// printf("Malloc test 5 - calloc\n");
-	// printf("- small calloc: ");
-	// void* ptr = mm_calloc();
-	// printf(GREEN "OK\n" RESET);
+	printf("Malloc test 5 - calloc\n");
+	printf("- small calloc: ");
+	void* ptr = mm_calloc(4, 10);
+	int free = mm_cur_avail_space();
+	int calculated = BLOCK_SML - (40 + 2 * sizeof(header_t));
+	assert(free == calculated);
+	mm_free(ptr);
+	free = mm_cur_avail_space();
+	calculated = 0;
+	assert(free == calculated);
+	printf(GREEN "OK\n" RESET);
+
+	printf("- BIG calloc: ");
+	ptr = mm_calloc(1024, 2048);
+	free = mm_cur_avail_space();
+	calculated = BLOCK_BIG - (1024*2048 + 2 * sizeof(header_t));
+	assert(free == calculated);
+	mm_free(ptr);
+	free = mm_cur_avail_space();
+	calculated = 0;
+	assert(free == calculated);
+	printf(GREEN "OK\n" RESET);
+
+	printf("- overflow DANGER: ");
+	ptr = mm_calloc(__INT_MAX__, __INT_MAX__);
+	assert(ptr == NULL);
+	printf(GREEN "OK\n" RESET);
 }
 
 
@@ -204,5 +227,6 @@ main()
 	test_coalesce();
 	test_malloc_edge_cases();
 	test_free();
+	test_calloc();
 	return 0;
 }

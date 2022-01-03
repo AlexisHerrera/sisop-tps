@@ -325,8 +325,12 @@ void *
 mm_calloc(size_t nmemb, size_t size)
 {
 	if (size <= 0) return NULL; 
-	void * ptr = mm_alloc(size * nmemb);
-	memset(ptr, nmemb, size);
+	int result;
+	if (__builtin_mul_overflow(nmemb, size, &result)) {
+		return NULL;
+	}
+	void * ptr = mm_alloc(result);
+	if (!ptr) return NULL;
 	return ptr;
 }
 
