@@ -7,6 +7,20 @@
 #define GREEN "\033[32m"  /* Green */
 #define YELLOW "\033[33m" /* Yellow */
 
+typedef struct __node_t {
+	int size;
+	char type;
+	unsigned short id;
+	struct __node_t *anterior;
+	struct __node_t *next;
+} node_t;
+
+typedef struct __header_t {
+	int size;
+	char type;
+	unsigned short id;
+	int magic;
+} header_t;
 
 static void
 test_basic_functionality()
@@ -34,8 +48,8 @@ test_basic_functionality()
 
 	printf("- Free Memory available: ");
 	int free = mm_cur_avail_space();
-	int calculated = BLOCK_SML - 108 - (count_nodes() * 8);
-	printf("\n %d \n", count_nodes());
+	int calculated = BLOCK_SML - 100 - ((count_nodes()+1) * sizeof(header_t));
+	// int calculated = 0;
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
 
@@ -43,7 +57,8 @@ test_basic_functionality()
 	printf("- Memory can be freed: ");
 	mm_free(ptr);
 	free = mm_cur_avail_space();
-	calculated = BLOCK_SML - count_nodes() * 8;
+	// calculated = BLOCK_SML - count_nodes() * 8;
+	calculated = 0;
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
 
@@ -54,17 +69,16 @@ test_basic_functionality()
 
 	printf("- Free Memory available: ");
 	free = mm_cur_avail_space();
-	calculated = BLOCK_MED - 108 - count_nodes() * 8;
+	calculated = BLOCK_MED - BLOCK_SML - 100 - ((count_nodes()+1) * sizeof(header_t));
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
 
 	printf("- Memory can be freed: ");
 	mm_free(ptr);
 	free = mm_cur_avail_space();
-	calculated = BLOCK_MED + BLOCK_SML - count_nodes() * 8;
+	calculated = 0;
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
-
 
 	printf("- Alocated big block: ");
 	ptr = mm_alloc(BLOCK_MED + 100);
@@ -73,14 +87,14 @@ test_basic_functionality()
 
 	printf("- Free Memory available: ");
 	free = mm_cur_avail_space();
-	calculated = BLOCK_BIG + BLOCK_SML - 108 - count_nodes() * 8;	
+	calculated = BLOCK_BIG - BLOCK_MED - 100 - ((count_nodes()+1) * sizeof(header_t));	
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
 
 	printf("- Memory can be freed: ");
 	mm_free(ptr);
 	free = mm_cur_avail_space();
-	calculated = BLOCK_SML + BLOCK_MED + BLOCK_BIG - count_nodes() * 8;
+	calculated = 0;
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
 }
@@ -104,13 +118,13 @@ test_coalesce()
 	printf(GREEN "OK\n" RESET);
 
 	printf("- Can allocate total avail_space: ");
-	ptr1 = mm_alloc(BLOCK_BIG - 8);
+	ptr1 = mm_alloc(BLOCK_BIG - sizeof(header_t));
 	assert(ptr1 != NULL);
 	printf(GREEN "OK\n" RESET);
 
 	mm_free(ptr1);
 	int free = mm_cur_avail_space();
-	int calculated = BLOCK_SML + BLOCK_MED + BLOCK_BIG - count_nodes() * 8;
+	int calculated = 0;
 	assert(free == calculated);
 }
 
@@ -119,20 +133,10 @@ test_malloc_edge_cases()
 {
 	printf("Malloc test 3 - Casos borde\n");
 	void *ptr;
-	printf("- Should not allocate more than available space (%d bytes): ",
-	       mm_initial_avail_space());
-	ptr = mm_alloc(mm_initial_avail_space() + 1);
+	printf("- Should not allocate more than BIG block: ");
+	ptr = mm_alloc(BLOCK_BIG+1);
 	assert(ptr == NULL);
 	printf(GREEN "OK\n" RESET);
-
-	printf("- Can allocate all memory available (%d bytes): ",
-	       mm_initial_avail_space());
-	ptr = mm_alloc(mm_initial_avail_space());
-	assert(ptr != NULL);
-	printf(GREEN "OK\n" RESET);
-
-	mm_free(ptr);
-	assert(mm_cur_avail_space() == mm_initial_avail_space());
 }
 
 static void
@@ -143,16 +147,16 @@ test_free()
 	mm_free(NULL);
 	printf(GREEN "OK\n" RESET);
 
-	// printf("- Free invalid memory: ");
-	// mm_free((void *) 0xabcdef);
-	// printf(GREEN "OK\n" RESET);
+	printf("- Free invalid memory: ");
+	mm_free((void *) 0xabcdef);
+	printf(GREEN "OK\n" RESET);
 
 	printf("- Double free: ");
 	void *ptr = mm_alloc(100);
 	mm_free(ptr);
 	mm_free(ptr);
 	int free = mm_cur_avail_space();
-	int calculated = BLOCK_SML + BLOCK_MED + BLOCK_BIG - count_nodes() * 8;
+	int calculated = 0;
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
 }
@@ -162,7 +166,7 @@ main()
 {
 	test_basic_functionality();
 	test_coalesce();
-	// test_malloc_edge_cases();
+	test_malloc_edge_cases();
 	test_free();
 	return 0;
 }
