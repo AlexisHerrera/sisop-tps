@@ -97,6 +97,20 @@ test_basic_functionality()
 	calculated = 0;
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
+
+	printf("- 10 allocs: ");
+	void* array[10];
+	for (int i = 0; i < 10; i++) {
+		array[i] = mm_alloc(10);	
+	}
+	for (int i = 0; i < 10; i++) {
+		mm_free(array[i]);	
+	}
+	free = mm_cur_avail_space();
+	calculated = 0;
+	assert(free == calculated);
+	printf(GREEN "OK\n" RESET);
+
 }
 
 static void
@@ -137,6 +151,19 @@ test_malloc_edge_cases()
 	ptr = mm_alloc(BLOCK_BIG+1);
 	assert(ptr == NULL);
 	printf(GREEN "OK\n" RESET);
+
+	printf("- Really small aloc: ");
+	ptr = mm_alloc(1);
+	int free = mm_cur_avail_space();
+	int calculated = BLOCK_SML - (32 + 2 * sizeof(header_t));
+	assert(free == calculated);
+	mm_free(ptr);
+	free = mm_cur_avail_space();
+	calculated = 0;
+	assert(free == calculated);
+
+	printf(GREEN "OK\n" RESET);
+
 }
 
 static void
@@ -160,6 +187,15 @@ test_free()
 	assert(free == calculated);
 	printf(GREEN "OK\n" RESET);
 }
+
+static void
+test_calloc() {
+	// printf("Malloc test 5 - calloc\n");
+	// printf("- small calloc: ");
+	// void* ptr = mm_calloc();
+	// printf(GREEN "OK\n" RESET);
+}
+
 
 int
 main()

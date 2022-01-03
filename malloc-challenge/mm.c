@@ -76,7 +76,6 @@ aloc_block(size_t size)
 	if ((blk_mem_alocated+block_size) > MAX_HEAP) {
 		return NULL;
 	}
-	blk_mem_alocated += block_size;
 	node_t *new_block = mmap(NULL,
 	            block_size,
 	            PROT_READ | PROT_WRITE,
@@ -86,6 +85,7 @@ aloc_block(size_t size)
 	if (new_block == MAP_FAILED) {
 		exit(-1);
 	}
+	blk_mem_alocated += block_size;
 	new_block->size = block_size - sizeof(header_t);
 	new_block->type = block_type;
 	new_block->id = block_id_gen;
@@ -176,6 +176,7 @@ coalesce()
 			memset(base_node, 0, sizeof(node_t));
 			int size_to_unmap = check_empty_block(next_node);
 			if (size_to_unmap) {
+				// si el bloque esta vacio, lo tengo que borrar de la lista y liberar la memoria
 				if (next_node == head) {
 				// Mantego el head actualizado.
 					head = next_node->next;
@@ -186,6 +187,7 @@ coalesce()
 				}
 				base_node = next_node->next;
 				next_node = next_node->next->next;
+				// libero la memoria
 				munmap(next_node, size_to_unmap);
 				blk_mem_alocated -= size_to_unmap;
 			}
@@ -200,6 +202,7 @@ coalesce()
 			memset(next_node, 0, sizeof(node_t));
 			int size_to_unmap = check_empty_block(base_node);
 			if (size_to_unmap) {
+				// si el bloque esta vacio, lo tengo que borrar de la lista y liberar la memoria
 				node_t *new_next = base_node->next;
 				if (base_node == head) {
 					head = new_next;
@@ -321,7 +324,10 @@ mm_free(void *ptr)
 void *
 mm_calloc(size_t nmemb, size_t size)
 {
-	return NULL;
+	if (size <= 0) return NULL; 
+	void * ptr = mm_alloc(size * nmemb);
+	memset(ptr, nmemb, size);
+	return ptr;
 }
 
 /* Test only*/
