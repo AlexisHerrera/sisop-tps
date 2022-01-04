@@ -15,7 +15,7 @@
 
 #define MAGIC_NO 1234567
 
-enum blk_type{SML_T, MED_T, BIG_T};
+enum blk_type { SML_T, MED_T, BIG_T };
 
 typedef struct __node_t {
 	int size;
@@ -71,17 +71,17 @@ alloc_block(size_t size)
 	} else {
 		return NULL;
 	}
-	if ((blk_mem_allocated+block_size) > MAX_HEAP) {
+	if ((blk_mem_allocated + block_size) > MAX_HEAP) {
 		return NULL;
 	}
 	// MAP_ANON indica que no está backeado por un archivo
 	// MAP_PRIVATE hace que se haga un mapeo con COW
 	node_t *new_block = mmap(NULL,
-	            block_size,
-	            PROT_READ | PROT_WRITE,
-	            MAP_ANONYMOUS | MAP_PRIVATE,
-	            -1,
-	            0);
+	                         block_size,
+	                         PROT_READ | PROT_WRITE,
+	                         MAP_ANONYMOUS | MAP_PRIVATE,
+	                         -1,
+	                         0);
 	if (new_block == MAP_FAILED) {
 		exit(-1);
 	}
@@ -93,7 +93,7 @@ alloc_block(size_t size)
 	if (!heap_start) {
 		heap_start = new_block;
 	} else {
-		heap_start = min((void *)heap_start, (void *)new_block);
+		heap_start = min((void *) heap_start, (void *) new_block);
 	}
 	if (!head) {
 		head = new_block;
@@ -102,7 +102,7 @@ alloc_block(size_t size)
 	} else {
 		head->anterior = new_block;
 		new_block->next = head;
-		new_block->anterior = NULL; 
+		new_block->anterior = NULL;
 		head = new_block;
 	}
 	return new_block;
@@ -126,12 +126,17 @@ find_free_region(size_t size)
  * Si el nodo tiene libre el tamaño de un bloque y es de ese tipo de bloque
    entonces devuelve el tamaño del bloque a liberar.
 */
-int calc_size_to_unmap(node_t *block) {
-	if ((block->type == SML_T) && (block->size == (BLOCK_SML - sizeof(header_t)))) {
+int
+calc_size_to_unmap(node_t *block)
+{
+	if ((block->type == SML_T) &&
+	    (block->size == (BLOCK_SML - sizeof(header_t)))) {
 		return BLOCK_SML;
-	} else if ((block->type == MED_T) && (block->size == (BLOCK_MED - sizeof(header_t)))) {
+	} else if ((block->type == MED_T) &&
+	           (block->size == (BLOCK_MED - sizeof(header_t)))) {
 		return BLOCK_MED;
-	} else if ((block->type == BIG_T) && (block->size == (BLOCK_BIG - sizeof(header_t)))) {
+	} else if ((block->type == BIG_T) &&
+	           (block->size == (BLOCK_BIG - sizeof(header_t)))) {
 		return BLOCK_BIG;
 	}
 	return 0;
@@ -147,14 +152,17 @@ coalesce()
 	node_t *next_node = base_node->next;
 
 	// caso borde: si uso todo un bloque y lo libero, me queda solo 1 nodo en la lista y no entra al loop
-	{int size_to_unmap = calc_size_to_unmap(head);
-	if (size_to_unmap) {
-		munmap(head, size_to_unmap);
-		blk_mem_allocated -= size_to_unmap;
-		head = NULL;
-	} }
+	{
+		int size_to_unmap = calc_size_to_unmap(head);
+		if (size_to_unmap) {
+			munmap(head, size_to_unmap);
+			blk_mem_allocated -= size_to_unmap;
+			head = NULL;
+		}
+	}
 	while (next_node) {
-		if (base_node->type != next_node->type || base_node->id != next_node->id) {
+		if (base_node->type != next_node->type ||
+		    base_node->id != next_node->id) {
 			base_node = next_node;
 			next_node = base_node->next;
 			continue;
@@ -180,12 +188,14 @@ coalesce()
 			if (size_to_unmap) {
 				// si el bloque esta vacio, lo tengo que borrar de la lista y liberar la memoria
 				if (next_node == head) {
-				// Mantego el head actualizado.
+					// Mantego el head actualizado.
 					head = next_node->next;
 					head->anterior = NULL;
 				} else {
-					next_node->next->anterior = next_node->anterior;
-					next_node->anterior->next = next_node->next;
+					next_node->next->anterior =
+					        next_node->anterior;
+					next_node->anterior->next =
+					        next_node->next;
 				}
 				base_node = next_node->next;
 				next_node = next_node->next->next;
@@ -293,7 +303,7 @@ mm_free(void *ptr)
 	if (!ptr) {
 		return;
 	}
-	if (!head || ptr < heap_start ) {
+	if (!head || ptr < heap_start) {
 		return;
 	}
 
@@ -326,13 +336,15 @@ mm_free(void *ptr)
 void *
 mm_calloc(size_t nmemb, size_t size)
 {
-	if (size <= 0) return NULL; 
+	if (size <= 0)
+		return NULL;
 	int result;
 	if (__builtin_mul_overflow(nmemb, size, &result)) {
 		return NULL;
 	}
-	void * ptr = mm_alloc(result);
-	if (!ptr) return NULL;
+	void *ptr = mm_alloc(result);
+	if (!ptr)
+		return NULL;
 	// Segun la man 2 calloc, setea la memoria a 0.
 	memset(ptr, 0, result);
 	return ptr;
@@ -361,7 +373,8 @@ mm_cur_avail_space()
 }
 
 int
-count_nodes() {
+count_nodes()
+{
 	node_t *iter = head;
 	int cont = 0;
 	while (iter) {

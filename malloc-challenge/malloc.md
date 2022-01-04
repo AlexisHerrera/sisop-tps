@@ -19,6 +19,24 @@ Por lo que lo máximo que se puede pedir es 16360 bytes.
 
 Se brinda un set de test para comprobar funcionamiento interno de la implementación de la libreria:  ```./test ```.
 Este set de pruebas tiene un análisis mas detallado del manejo de la memoria, los cuales no serían fáciles de probar con la libreria original (por ejemplo ```mm_cur_avail_space``` no es una funcion que tenga malloc)
+### Programa de test (single block)
+1. Funcionalidad básica:  
+* malloc devuelva un puntero != NULL
+* se pueda escribir en ese rango de memoria
+* que el espacio de memoria sea el correcto tras el malloc
+* que al liberar la memoria todo vuelve al estado inicial
+2. Coalesce: 
+* Tras hacer 2 allocs y 2 frees deberia haber el mismo espacio de memoria que el inicio
+* Si la memoria no quedo fragmentada, debería poderse ocupar todo el espacio libre del bloque.
+* Liberar ese espacio deja la memoria al estado inicial
+3. Casos borde:  
+* No se puede pedir más memoria que toda la memoria disponible
+* Se puede allocar toda la memoria disponible
+4. free:  
+* Liberar null no hace nada
+* Liberar memoria inválida no hace nada.
+* Hacer double free es igual a liberar memoria inválida.
+
 
 ### Programa de ejemplo
 
@@ -73,3 +91,24 @@ Alcance grupal
 ## Parte 2: Agregando más bloques
 
 Se agregaron tests al archivo test.c que testean la implementación multibloque. Sin embargo, el test de coalesce single block quedó obsoleto.
+### Programa de test (multiblock)
+1. Funcionalidad básica (multiblock):  
+* malloc devuelva un puntero != NULL para cada alloc con distinto tamaño de bloque (SML, MED, BIG)
+* Al liberar cada alloc, se vuelve al estado inicial
+* Se hace una prueba con 10 allocs y 10 frees
+
+2. Coalesce: 
+* En 2 bloques de tamaño 1MiB, Tras hacer 2 allocs y 2 frees deberia haber el mismo espacio de memoria que el inicio
+* Si la memoria no quedo fragmentada, debería poderse ocupar todo el espacio libre del bloque.
+* Liberar ese espacio deja la memoria al estado inicial
+
+3. Casos borde:  
+* No se puede pedir más memoria que BIG BLOCK (32MiB)
+* Hacer malloc de un tamaño inferior a un tamaño de bloque definido, devuelve el más próximo a él. Por ejemplo, malloc(1) usa un bloque de 16KiB.
+
+4. test_calloc:  
+* Devuelve un puntero no nulo al hacer utilizar valores no espurios
+* Permite hacer uso de bloques de 32 MiB, como malloc.
+* Tiene en cuenta el overflow que puede pasar el hacer nmemb*size, devolviendo NULL en ese caso
+* Setea la memoria en 0 correctamente
+
